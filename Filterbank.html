@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0">
+    <title>Otonashi</title>
+    <link rel="stylesheet" type="text/css" href="./style/style.css" charset="utf-8"/>
+    <style>
+canvas {
+    display: block;
+    margin: 0 auto;
+}
+table {
+    border: none;
+    border-collapse: collapse;
+    border-spacing: 0px;
+}
+td, tr {
+    padding: 1px;
+}
+    </style>
+</head>
+<body>
+<div class="Main">
+    <div class="Title">
+        🎵 Otonashi 可视化：分析子带滤波器组<span style="font-size: 13px; color: #aaa;">（音频数据仅在浏览器内部处理，可查看本页代码以了解实现详情。）</span>
+    </div>
+
+    <div class="Block" style="text-align: center;">
+        <div style="text-align: left; line-height: 23px; color:#666;">
+            ⭐ 本页演示了MPEG音频编码所使用的分析子带滤波器组。建议使用仓库提供的扫频示例（<code>resource/Sweep.wav</code>）来测试，效果非常显著。根据标准，每个granule长度为576点，经滤波器组滤波后，分为32个子带（也就是下面的32个示波器），每个子带有18个时域采样（相当于1/32降采样）。
+        </div>
+        <div style="text-align: left; margin: 10px 0; padding: 10px; border-radius: 5px; background: #e1f5ff; font-weight: bold;">
+            打开音频文件（WAV、MP3等均可）：<input type="file" id="fileSelector" name="files[]" multiple>
+        </div>
+
+        <div style="margin: 10px 0;">
+            <button id="play" data-state="stopped"><span id="playLabel">播放</span><svg id="ThrobberPlaying" version="1" xmlns="http://www.w3.org/2000/svg" width="16" height="16" style="transform: scale(1); display: none; position: relative; top: 3px; left: 3px;"><style>@keyframes rotate{0%{transform:rotate(0deg)}to{transform:rotate(360deg)}}@keyframes fillunfill{0%{stroke-dashoffset:32.3}50%{stroke-dashoffset:0}to{stroke-dashoffset:-31.9}}@keyframes rot{0%{transform:rotate(0deg)}to{transform:rotate(-360deg)}}@keyframes colors{0%,to{stroke:#00aaff}}</style><g style="animation-duration:1568.63ms;animation-iteration-count:infinite;animation-name:rotate;animation-timing-function:linear;transform-origin:50% 50%;width:16px;height:16px"><path fill="none" d="M8 1.125A6.875 6.875 0 1 1 1.125 8" stroke-width="2.25" stroke-linecap="round" style="animation-duration:1333ms,5332ms,5332ms;animation-fill-mode:forwards;animation-iteration-count:infinite,infinite,infinite;animation-name:fillunfill,rot,colors;animation-play-state:running,running,running;animation-timing-function:cubic-bezier(.4,0,.2,1),steps(4),linear;transform-origin:50% 50%" stroke-dasharray="32.4" stroke-dashoffset="32.4"></path></g></svg></button>
+        </div>
+        <div class="ProcessbarContainer">
+            <div id="progressbar" style="height: 100%; background-color: #00aaff; width: 5px;"></div>
+            <div id="timer" style="position: absolute; top: 0; left: 0; font-size: 14px; height: 15px; line-height: 15px; margin: 5px 10px;"></div>
+        </div>
+
+        <table>
+            <tr><td><canvas id="osc0"  height="100px" width="300px"></canvas></td><td><canvas id="osc1"  height="100px" width="300px"></canvas></td></tr>
+            <tr><td><canvas id="osc2"  height="100px" width="300px"></canvas></td><td><canvas id="osc3"  height="100px" width="300px"></canvas></td></tr>
+            <tr><td><canvas id="osc4"  height="100px" width="300px"></canvas></td><td><canvas id="osc5"  height="100px" width="300px"></canvas></td></tr>
+            <tr><td><canvas id="osc6"  height="100px" width="300px"></canvas></td><td><canvas id="osc7"  height="100px" width="300px"></canvas></td></tr>
+            <tr><td><canvas id="osc8"  height="100px" width="300px"></canvas></td><td><canvas id="osc9"  height="100px" width="300px"></canvas></td></tr>
+            <tr><td><canvas id="osc10" height="100px" width="300px"></canvas></td><td><canvas id="osc11" height="100px" width="300px"></canvas></td></tr>
+            <tr><td><canvas id="osc12" height="100px" width="300px"></canvas></td><td><canvas id="osc13" height="100px" width="300px"></canvas></td></tr>
+            <tr><td><canvas id="osc14" height="100px" width="300px"></canvas></td><td><canvas id="osc15" height="100px" width="300px"></canvas></td></tr>
+            <tr><td><canvas id="osc16" height="100px" width="300px"></canvas></td><td><canvas id="osc17" height="100px" width="300px"></canvas></td></tr>
+            <tr><td><canvas id="osc18" height="100px" width="300px"></canvas></td><td><canvas id="osc19" height="100px" width="300px"></canvas></td></tr>
+            <tr><td><canvas id="osc20" height="100px" width="300px"></canvas></td><td><canvas id="osc21" height="100px" width="300px"></canvas></td></tr>
+            <tr><td><canvas id="osc22" height="100px" width="300px"></canvas></td><td><canvas id="osc23" height="100px" width="300px"></canvas></td></tr>
+            <tr><td><canvas id="osc24" height="100px" width="300px"></canvas></td><td><canvas id="osc25" height="100px" width="300px"></canvas></td></tr>
+            <tr><td><canvas id="osc26" height="100px" width="300px"></canvas></td><td><canvas id="osc27" height="100px" width="300px"></canvas></td></tr>
+            <tr><td><canvas id="osc28" height="100px" width="300px"></canvas></td><td><canvas id="osc29" height="100px" width="300px"></canvas></td></tr>
+            <tr><td><canvas id="osc30" height="100px" width="300px"></canvas></td><td><canvas id="osc31" height="100px" width="300px"></canvas></td></tr>
+        </table>
+
+    </div>
+
+
+
+    <div style="text-align: center; font-size: 13px; color:#888888; margin: 20px auto; line-height: 20px;">
+        <div><a href="https://github.com/mikukonai/Otonashi">Project Otonashi</a></div>
+        <div>Copyright &copy; 2019.11.14 Mikukonai</div>
+    </div>
+
+</div>
+
+<script src="./script/jquery.min.js"></script>
+<script src="./script/canvas.js"></script>
+<script src="./script/wav.js"></script>
+<script src="Constants.js"></script>
+<script src="Utils.js"></script>
+<script src="FFT.js"></script>
+<script src="AnalysisSubbandFilter.js"></script>
+
+<script>
+
+let Xmin = 0, Xmax = 17, Ymin = -1, Ymax = 1;
+let cvs = new Array();
+for(let i = 0; i < 32; i++) {
+    let cv = new Canvas(`osc${String(i)}`, [Xmin, Ymin], [Xmax, Ymax]);
+    cv.Init();
+    cv.SetBackgroundColor("#000");
+    cvs.push(cv);
+}
+
+
+const WINDOW_LENGTH = 1024;
+
+// 绘制波形
+function DrawFrame(cv, sbIndex, data) {
+    cv.Init();
+    cv.SetBackgroundColor("#000");
+    // 绘制横坐标
+    for(let i = 0; i < data.length; i++) {
+        cv.Line([i, cv.Ymin], [i, cv.Ymax], "#333");
+        // cv.context.fillStyle = "#666";
+        // cv.Text(`${i}`, [i, -0.9]);
+    }
+    // 子带编号
+    cv.context.fillStyle = "#fff";
+    cv.Text(`Subband ${sbIndex}`, [0.5, 0.7]);
+    for(let i = 1; i < data.length; i++) {
+        cv.Line([i-1, data[i-1]], [i, data[i]], LineColor);
+    }
+}
+
+
+let PCM;
+let AudioContext = new window.AudioContext();
+let filteredLeft, filteredRight;
+
+let rawAudioData;
+
+const LineColor = "#0f0";
+
+
+let fileSelector = document.getElementById('fileSelector');
+fileSelector.onchange = () => {
+    let file = fileSelector.files[0];
+
+    let Reader = new FileReader();
+
+    Reader.onloadend = () => {
+        rawAudioData = Reader.result;
+    }
+
+    Reader.readAsArrayBuffer(file);
+};
+
+function Render(rawAudioData, cutoffFreq) {
+    AudioContext.decodeAudioData(rawAudioData, (audioBuffer) => {
+        // 获取两个声道的原始数据
+        let SampleRate = audioBuffer.sampleRate;
+        let leftChannel  = audioBuffer.getChannelData(0);
+        let rightChannel = audioBuffer.getChannelData(1);
+
+        let AudioBufferSourceNode = AudioContext.createBufferSource();
+        AudioBufferSourceNode.connect(AudioContext.destination);
+        AudioBufferSourceNode.buffer = audioBuffer;
+        AudioBufferSourceNode.start(0);
+
+        let StartTime = AudioContext.currentTime;
+
+        let timer = setInterval(() => {
+            let offset = Math.round((AudioContext.currentTime - StartTime) * SampleRate);
+            $("#timer").html(`${offset} / ${leftChannel.length} (${(offset / leftChannel.length * 100).toFixed(1)}%)`);
+            $("#progressbar").css("width", `${(offset / leftChannel.length * 100).toFixed(2)}%`);
+
+            // 滤波器组
+            let subbands = AnalysisSubbandFilter(leftChannel, offset);
+
+            // 绘制
+            for(let i = 0; i < 32; i++) {
+                DrawFrame(cvs[i], i, subbands[i]);
+            }
+
+            if(offset >= leftChannel.length) {
+                AudioBufferSourceNode.stop();
+                clearInterval(timer);
+                $("#playLabel").html("播放");
+                $("#ThrobberPlaying").hide();
+                $("#play").attr("data-state", "stopped");
+            }
+
+        }, 10);
+        });
+}
+
+$("#play").click(() => {
+    let cutoff = parseFloat($("#cutoff").val());
+
+    let state = $("#play").attr("data-state");
+    if(state === "stopped") {
+        $("#playLabel").html("暂停");
+        $("#ThrobberPlaying").show();
+        Render(rawAudioData, cutoff);
+        $("#play").attr("data-state", "playing");
+    }
+    else if(state === "playing") {
+        AudioContext.suspend();
+        $("#playLabel").html("继续播放");
+        $("#ThrobberPlaying").hide();
+        $("#play").attr("data-state", "pausing");
+    }
+    else if(state === "pausing") {
+        AudioContext.resume();
+        $("#playLabel").html("暂停");
+        $("#ThrobberPlaying").show();
+        $("#play").attr("data-state", "playing");
+    }
+
+    
+});
+
+
+
+</script>
+
+
+</body>
+</html>
