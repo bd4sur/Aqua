@@ -10,11 +10,15 @@
 <div class="Main"></div>
 
 <script src="./script/jquery.min.js"></script>
+<script src="PCMData.js"></script>
 <script src="Constants.js"></script>
+<script src="Huffman.js"></script>
 <script src="Utils.js"></script>
 <script src="FFT.js"></script>
 <script src="AnalysisSubbandFilter.js"></script>
 <script src="PsychoacousticModel2.js"></script>
+<script src="MDCT.js"></script>
+<script src="QuantizationLoop.js"></script>
 
 <script>
 /*
@@ -70,38 +74,53 @@ for(let i = 0; i < 32; i++) {
     }
 }
 
-// for(let GranuleOffset = 0; GranuleOffset < PCM.length; GranuleOffset += GRANULE_LENGTH) {
+// for(let GranuleOffset = 0; GranuleOffset < PCMData.length; GranuleOffset += GRANULE_LENGTH) {
 
 let GranuleOffset = GRANULE_LENGTH * 5;
 
 // 分析子带滤波
-currentGranuleSubbands = AnalysisSubbandFilter(PCM, GranuleOffset);
+currentGranuleSubbands = AnalysisSubbandFilter(PCMData, GranuleOffset);
 
 // 时频变换
 let Spectrum = CalculateGranuleSpectrum(currentGranuleSubbands, prevGranuleSubbands, WINDOW_NORMAL)[0];
 
 // 量化
-let QuantifiedSpectrum;
+let QuantizedSpectrum;
 let quantStep;
+let huffman;
 for(let qquant = 0; qquant < 100; qquant++) { // 100可以理解成超时阈值
-    QuantifiedSpectrum = new Array();
+
+    QuantizedSpectrum = new Array();
     let quantanf = SYSTEM_CONSTANT * Math.log(SFM(Spectrum));
     quantStep = quantanf + qquant;
     for(let i = 0; i < Spectrum.length; i++) {
-        QuantifiedSpectrum[i] = Quantize(Spectrum[i], quantStep);
+        QuantizedSpectrum[i] = Quantize(Spectrum[i], quantStep);
     }
 
-    let huffman = HuffmanEncodeQuantizedSpectrum(QuantifiedSpectrum);
-
-    if(huffman !== null && huffmanCode.CodeString.length < 4095) break;
+    huffman = HuffmanEncodeQuantizedSpectrum(QuantizedSpectrum);
+    if(huffman === null) {
+        continue; // 重新量化
+    }
+    else {
+        console.log(`Huffman码长：${huffman.CodeString.length}`);
+        if(huffman.CodeString.length < 2000) {
+            console.log(`量化步数qquant = ${qquant}`)
+            break; // 满足条件退出
+        }
+    }
 }
+console.log(`量化后的频谱：`);
+console.log(QuantizedSpectrum);
+
+console.log(`编码结果：`);
+console.log(huffman);
 
 // 计算量化误差
-let distortion = CalculateQuantDistortion(Spectrum, QuantifiedSpectrum, quantStep, LONG_BLOCK);
-console.log(`量化误差`);
+let distortion = CalculateQuantDistortion(Spectrum, QuantizedSpectrum, quantStep, LONG_BLOCK);
+console.log(`量化误差：`);
 console.log(distortion);
 
-// GranuleSpectrums.push(QuantifiedSpectrum);
+// GranuleSpectrums.push(QuantizedSpectrum);
 // prevGranuleSubbands = currentGranuleSubbands;
 
 // }

@@ -106,23 +106,6 @@ function PartitionQuantizedSpectrum(qspect) {
  * @description 对量化频谱作哈夫曼编码
  */
 function HuffmanEncodeQuantizedSpectrum(qspect) {
-    // 对量化频谱分区
-    let partition = PartitionQuantizedSpectrum(qspect);
-
-    // 处理大值区
-    // 以尺度因子频带（scalefactor bands，SFB）划分子区间（region）：按照C.1.5.4.4.6的推荐，选择大值区内的前三分之一SFB、后四分之一SFB为分割点，并保证分割点跟SFB的分割点对齐（即region划分不能跨过SFB）。（详见p27）
-    // 保存分割点信息到region0_count和region1_count，具体是子区间0和1所包含的SFB数量减一。
-    // 注意：对于短块部分（即非混合块模式的全部短块，以及混合块模式下高频方向的短块部分），这两个数量应相应地乘以3。详见p27。
-
-    // 对每个子区间选取不同的Huffman编码表，保留码表编号（含linbits）到table_select，并对子区间进行编码。
-
-    // 处理小值区
-    // 分别使用0和1两个四元组Huffman码表进行编码，计算总码长，选取较小者为最终的编码，并记录对应的码表编号0或1到count1table_select。
-
-    // 零值区无需处理
-
-    // 按照C.1.5.3.7提供的步骤，输出符合2.4.1.7规定的Huffmancodebits二进制序列，供内圈循环计算量化频谱的Huffman码长。
-    // 同时保留边信息（码表选择信息等），待外圈循环和帧循环确定 尺度因子、scfsi、量化步长、预加重标识 等信息后，输出最终的一帧编码。
     let Bigvalues = -1,
         BigvalueTableSelect = new Array(),
         Region0Count = -1,
@@ -143,7 +126,11 @@ function HuffmanEncodeQuantizedSpectrum(qspect) {
 
     let SFBands = ScaleFactorBands[SAMPLE_RATE_44100][LONG_BLOCK];
     let BigvaluesCodeString = "", SmallvaluesCodeString = "";
+
     // 处理大值区
+    // 以尺度因子频带（scalefactor bands，SFB）划分子区间（region）：按照C.1.5.4.4.6的推荐，选择大值区内的前三分之一SFB、后四分之一SFB为分割点，并保证分割点跟SFB的分割点对齐（即region划分不能跨过SFB）。（详见p27）
+    // 保存分割点信息到region0_count和region1_count，具体是子区间0和1所包含的SFB数量减一。
+    // 注意：对于短块部分（即非混合块模式的全部短块，以及混合块模式下高频方向的短块部分），这两个数量应相应地乘以3。详见p27。
     if(BigvaluesPartition[1] > 0) {
         // 确定大值区的尺度因子频带数目，计算分割点
         let LastSFBIndexOfBigvalues = -1;
@@ -162,6 +149,7 @@ function HuffmanEncodeQuantizedSpectrum(qspect) {
         let Region2_SFBNum = SFBNumberInBigvalues - Region0_SFBNum - Region1_SFBNum;
 
         Region0Count = Region0_SFBNum - 1;
+        Region1Count = Region1_SFBNum - 1;
         if(Region1_SFBNum <= 0) {
             Region1_SFBNum = Region2_SFBNum;
             Region2_SFBNum = 0;
@@ -171,7 +159,7 @@ function HuffmanEncodeQuantizedSpectrum(qspect) {
         let region01 = SFBands[Region0_SFBNum][0]; // Region 1 的起点
         let region12 = SFBands[Region0_SFBNum + Region1_SFBNum][0]; // Region 2 的起点
 
-        // 计算每个region的最大值，并选取Huffman编码表
+        // 计算每个region的最大值，选取不同的Huffman编码表，保留码表编号到table_select
         let MaxValue0 = -1, MaxValue1 = -1, MaxValue2 = -1;
         for(let i = 0; i < region01; i++) {
             if(qspect[i] > MaxValue0) { MaxValue0 = qspect[i]; }
@@ -185,7 +173,9 @@ function HuffmanEncodeQuantizedSpectrum(qspect) {
 
         let tableSelect0 = -1, tableSelect1 = -1, tableSelect2 = -1;
         for(let i = 0; i < HuffmanTableDuple.length; i++) {
-            let huffmanTableMaxValue = Math.pow(2, HuffmanTableDuple[i].linbits) - 1 + 15;
+            let htable = HuffmanTableDuple[i];
+            if(htable === null) continue;
+            let huffmanTableMaxValue = htable.maxvalue;
             if(tableSelect0 < 0 && MaxValue0 < huffmanTableMaxValue) { tableSelect0 = i; }
             if(tableSelect1 < 0 && MaxValue1 < huffmanTableMaxValue) { tableSelect1 = i; }
             if(tableSelect2 < 0 && MaxValue2 < huffmanTableMaxValue) { tableSelect2 = i; }
@@ -198,7 +188,7 @@ function HuffmanEncodeQuantizedSpectrum(qspect) {
         BigvalueTableSelect[2] = tableSelect2;
 
         // 按照格式对大值区进行编码
-        let codeString0 = "", codeString1 = "", codeString = "";
+        let codeString0 = "", codeString1 = "", codeString2 = "";
         for(let i = 0; i < region01; i += 2) {
             let x = qspect[i], y = qspect[i+1];
             let huffman = EncodeDuple(x, y, tableSelect0);
@@ -231,18 +221,19 @@ function HuffmanEncodeQuantizedSpectrum(qspect) {
     }
 
     // 处理小值区
+    // 分别使用0和1两个四元组Huffman码表进行编码，计算总码长，选取较小者为最终的编码，并记录对应的码表编号0或1到count1table_select。
     if(SmallvaluesPartition[1] > SmallvaluesPartition[0]) {
         let codeStringA = "", codeStringB = "";
         // 分别使用两个码表进行编码，计算编码长度
         for(let i = SmallvaluesPartition[0]; i < SmallvaluesPartition[1]; i += 4) {
             let v = qspect[i], w = qspect[i+1], x = qspect[i+2], y = qspect[i+3];
-            codeStringA = EncodeQuadruple(v, w, x, y, 0);
+            codeStringA += String(EncodeQuadruple(v, w, x, y, 0));
             if(v !== 0) { codeStringA += String((v > 0) ? "1" : "0"); }
             if(w !== 0) { codeStringA += String((w > 0) ? "1" : "0"); }
             if(x !== 0) { codeStringA += String((x > 0) ? "1" : "0"); }
             if(y !== 0) { codeStringA += String((y > 0) ? "1" : "0"); }
 
-            codeStringB = EncodeQuadruple(v, w, x, y, 1);
+            codeStringB += String(EncodeQuadruple(v, w, x, y, 1));
             if(v !== 0) { codeStringB += String((v > 0) ? "1" : "0"); }
             if(w !== 0) { codeStringB += String((w > 0) ? "1" : "0"); }
             if(x !== 0) { codeStringB += String((x > 0) ? "1" : "0"); }
@@ -263,6 +254,7 @@ function HuffmanEncodeQuantizedSpectrum(qspect) {
     let HuffmanCodeString = BigvaluesCodeString + SmallvaluesCodeString;
 
     return {
+        "Partition": partition,
         "CodeString": HuffmanCodeString,
         "Bigvalues": Bigvalues,
         "BigvalueTableSelect": BigvalueTableSelect,
