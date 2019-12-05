@@ -1,5 +1,50 @@
 
 /**
+ * @description 2的4次根号
+ */
+const ROOT_2_4 = 1.189207115002721;
+
+/**
+ * @description 频谱平坦度，用于计算量化步长初值
+ */
+function SFM(xr) {
+    let temp1 = 0, temp2 = 0;
+    for(let i = 0; i < xr.length; i++) {
+        let sqr = xr[i] * xr[i];
+        temp1 += Math.log(sqr);
+        temp2 += sqr;
+    }
+    temp1 /= xr.length;
+    temp1 = Math.exp(temp1);
+    temp2 /= xr.length;
+    return (temp1 / temp2);
+}
+
+/**
+ * @description 计算各个尺度因子频带的量化误差
+ */
+function CalculateQuantDistortion(xr, ix, quantStep, blockType) {
+    let xfsf = new Array();
+    let SFB = ScaleFactorBands[SAMPLE_RATE][blockType];
+    for(let sbindex = 0; sbindex < SFB.length; sbindex++) {
+        let sum = 0;
+        for(let i = SFB[sbindex][0]; i <= SFB[sbindex][1]; i++) {
+            let temp1 = Math.abs(xr[i]) - Math.pow(ix[i], (4/3)) * Math.pow(ROOT_2_4, quantStep);
+            sum += (temp1 * temp1 / (SFB[sbindex][1] - SFB[sbindex][0] + 1));
+        }
+        xfsf[sbindex] = sum;
+    }
+    return xfsf;
+}
+
+/**
+ * @description 量化
+ */
+function Quantize(xr, quantStep) {
+    return Math.round(Math.pow((Math.abs(xr) / Math.pow(ROOT_2_4, quantStep)), 0.75) - 0.0946);
+}
+
+/**
  * @description 计算序列中最后一个非零值的下标，用于确定零值区的起始点。如果序列全为0，则返回-1。
  */
 function LastNzeroIndex(seq) {
@@ -124,7 +169,7 @@ function HuffmanEncodeQuantizedSpectrum(qspect) {
 
     Bigvalues = (BigvaluesPartition[1] - BigvaluesPartition[0]) / 2;
 
-    let SFBands = ScaleFactorBands[SAMPLE_RATE_44100][LONG_BLOCK];
+    let SFBands = ScaleFactorBands[SAMPLE_RATE][LONG_BLOCK];
     let BigvaluesCodeString = "", SmallvaluesCodeString = "";
 
     // 处理大值区
@@ -267,3 +312,28 @@ function HuffmanEncodeQuantizedSpectrum(qspect) {
 
 }
 
+/**
+ * @description 短块频谱重排
+ */
+function ReorderShortBlockSpectrum(qspects) {
+    let qspect576 = new Array();
+    let SFBands = ScaleFactorBands[SAMPLE_RATE][SHORT_BLOCK];
+    for(let sfb = 0; sfb < SFBands.length; sfb++) {
+        let sfbPartition = SFBands[sfb];
+        // 因最后一个SFB并未延伸到频谱末端(191)，所以应将其延伸到频谱末端
+        if(sfb === SFBands.length - 1) sfbPartition = [sfbPartition[0], 191];
+        for(let w = 0; w < 3; w++) {
+            for(let i = sfbPartition[0]; i <= sfbPartition[1]; i++) {
+                qspect576.push(qspects[w][i]);
+            }
+        }
+    }
+    return qspect576;
+}
+// let qspects = [[],[],[]];
+// for(let i = 0; i < 192; i++) {
+//     qspects[0][i] = i;
+//     qspects[1][i] = i + 10000;
+//     qspects[2][i] = i + 20000;
+// }
+// console.log(ReorderShortBlockSpectrum(qspects));

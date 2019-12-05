@@ -10,8 +10,12 @@
 <div class="Main"></div>
 
 <script src="./script/jquery.min.js"></script>
+
+
 <script src="PCMData.js"></script>
 <script src="Constants.js"></script>
+<script src="GlobalSettings.js"></script>
+
 <script src="Huffman.js"></script>
 <script src="Utils.js"></script>
 <script src="FFT.js"></script>
@@ -20,111 +24,10 @@
 <script src="MDCT.js"></script>
 <script src="QuantizationLoop.js"></script>
 
+
+<script src="Main.js"></script>
+
 <script>
-/*
-let input = RealArrayToComplexArray([1,0,1,0,0,0,0,0]);
-let spect = ComplexArrayToPolarArrays(FFT(input, input.length));
-console.log(spect[0]);
-console.log(spect[1]);
-*/
-
-const ROOT_2_4 = 1.189207115002721; // 2的4次根号
-
-function SFM(xr) {
-    let temp1 = 0, temp2 = 0;
-    for(let i = 0; i < xr.length; i++) {
-        let sqr = xr[i] * xr[i];
-        temp1 += Math.log(sqr);
-        temp2 += sqr;
-    }
-    temp1 /= xr.length;
-    temp1 = Math.exp(temp1);
-    temp2 /= xr.length;
-    return (temp1 / temp2);
-}
-
-
-// 计算各个尺度因子频带的量化误差
-function CalculateQuantDistortion(xr, ix, quantStep, blockType) {
-    let xfsf = new Array();
-    let SFB = ScaleFactorBands[SAMPLE_RATE_44100][blockType];
-    for(let sbindex = 0; sbindex < SFB.length; sbindex++) {
-        let sum = 0;
-        for(let i = SFB[sbindex][0]; i <= SFB[sbindex][1]; i++) {
-            let temp1 = Math.abs(xr[i]) - Math.pow(ix[i], (4/3)) * Math.pow(ROOT_2_4, quantStep);
-            sum += (temp1 * temp1 / (SFB[sbindex][1] - SFB[sbindex][0] + 1));
-        }
-        xfsf[sbindex] = sum;
-    }
-    return xfsf;
-}
-
-// 量化
-function Quantize(xr, quantStep) {
-    return Math.round(Math.pow((Math.abs(xr) / Math.pow(ROOT_2_4, quantStep)), 0.75) - 0.0946);
-}
-
-// 滑动Granule
-let GranuleSpectrums = new Array();
-let prevGranuleSubbands = new Array(), currentGranuleSubbands;
-for(let i = 0; i < 32; i++) {
-    prevGranuleSubbands[i] = new Array();
-    for(let j = 0; j < 18; j++) {
-        prevGranuleSubbands[i][j] = 0;
-    }
-}
-
-// for(let GranuleOffset = 0; GranuleOffset < PCMData.length; GranuleOffset += GRANULE_LENGTH) {
-
-let GranuleOffset = GRANULE_LENGTH * 5;
-
-// 分析子带滤波
-currentGranuleSubbands = AnalysisSubbandFilter(PCMData, GranuleOffset);
-
-// 时频变换
-let Spectrum = CalculateGranuleSpectrum(currentGranuleSubbands, prevGranuleSubbands, WINDOW_NORMAL)[0];
-
-// 量化
-let QuantizedSpectrum;
-let quantStep;
-let huffman;
-for(let qquant = 0; qquant < 100; qquant++) { // 100可以理解成超时阈值
-
-    QuantizedSpectrum = new Array();
-    let quantanf = SYSTEM_CONSTANT * Math.log(SFM(Spectrum));
-    quantStep = quantanf + qquant;
-    for(let i = 0; i < Spectrum.length; i++) {
-        QuantizedSpectrum[i] = Quantize(Spectrum[i], quantStep);
-    }
-
-    huffman = HuffmanEncodeQuantizedSpectrum(QuantizedSpectrum);
-    if(huffman === null) {
-        continue; // 重新量化
-    }
-    else {
-        console.log(`Huffman码长：${huffman.CodeString.length}`);
-        if(huffman.CodeString.length < 2000) {
-            console.log(`量化步数qquant = ${qquant}`)
-            break; // 满足条件退出
-        }
-    }
-}
-console.log(`量化后的频谱：`);
-console.log(QuantizedSpectrum);
-
-console.log(`编码结果：`);
-console.log(huffman);
-
-// 计算量化误差
-let distortion = CalculateQuantDistortion(Spectrum, QuantizedSpectrum, quantStep, LONG_BLOCK);
-console.log(`量化误差：`);
-console.log(distortion);
-
-// GranuleSpectrums.push(QuantizedSpectrum);
-// prevGranuleSubbands = currentGranuleSubbands;
-
-// }
-
 
 </script>
 

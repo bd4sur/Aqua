@@ -5,12 +5,19 @@ const GRANULE_LENGTH = 576;
 const GRANULES_PER_FRAME = 2;
 const FRAME_LENGTH = 1152;
 
+const BIT_RATES = [64, 128, 224, 320]; // 作为原理验证，仅支持4种码率
+
+const BIT_RATE_64  = 0;
+const BIT_RATE_128 = 1;
+const BIT_RATE_224 = 2;
+const BIT_RATE_320 = 3;
+
 const SAMPLE_RATES = [32000, 44100, 48000];
 
 /** 用于表格索引 */
 const SAMPLE_RATE_32000 = 0;
-const SAMPLE_RATE_44100 = 0;
-const SAMPLE_RATE_48000 = 0;
+const SAMPLE_RATE_44100 = 1;
+const SAMPLE_RATE_48000 = 2;
 
 const LONG_BLOCK  = 0;
 const SHORT_BLOCK = 1;

@@ -91,6 +91,28 @@ function ReduceAliasing(longBlockSpectrum) {
 }
 
 /**
+ * @description 窗口切换
+ * @reference Fig.C.7(p95)
+ * @input  prevWindowType - 上一个Granule的窗口类型
+ * @input  isAttack - 由PAM2给出的是否attack的判断（true/false）
+ * @output 当前Granule的窗口类型
+ */
+function SwitchWindowType(prevWindowType, isAttack) {
+    if(prevWindowType === WINDOW_NORMAL) {
+        return (isAttack) ? WINDOW_START : WINDOW_NORMAL;
+    }
+    else if(prevWindowType === WINDOW_START) {
+        return WINDOW_SHORT;
+    }
+    else if(prevWindowType === WINDOW_SHORT) {
+        return (isAttack) ? WINDOW_SHORT : WINDOW_STOP;
+    }
+    else if(prevWindowType === WINDOW_STOP) {
+        return (isAttack) ? WINDOW_START : WINDOW_NORMAL;
+    }
+}
+
+/**
  * @description 计算一个Granule的频谱输出，含MDCT和去混叠（仅长块）
  * @reference C.1.5.3.3(p96-97)
  * @input  currentGranuleSubbands - 当前Granule的分析子带滤波器输出：[SB0[18]..SB31[18]]
@@ -143,7 +165,7 @@ function CalculateGranuleSpectrum(currentGranuleSubbands, prevGranuleSubbands, w
                 // 加窗并MDCT
                 let shortWindowedMdctInput = new Array();
                 for(let i = 0; i < 12; i++) {
-                    shortWindowedMdctInput[i] = shortBlock[i-6] * WindowShort(i);
+                    shortWindowedMdctInput[i] = shortBlock[i] * WindowShort(i);
                 }
                 let shortMdctOutput = MDCT(shortWindowedMdctInput, 12);
                 // 拼接到第 shortBlockCount 个短块频谱上
