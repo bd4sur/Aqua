@@ -50,9 +50,9 @@ function CalculateQuantDistortion(xr, ix, quantStep, blockType) {
     let SFB = ScaleFactorBands[SAMPLE_RATE_44100][blockType];
     for(let sbindex = 0; sbindex < SFB.length; sbindex++) {
         let sum = 0;
-        for(let i = SFB[sbindex][0]; i < SFB[sbindex][1]; i++) {
+        for(let i = SFB[sbindex][0]; i <= SFB[sbindex][1]; i++) {
             let temp1 = Math.abs(xr[i]) - Math.pow(ix[i], (4/3)) * Math.pow(ROOT_2_4, quantStep);
-            sum += (temp1 * temp1 / (SFB[sbindex][1] - SFB[sbindex][0]));
+            sum += (temp1 * temp1 / (SFB[sbindex][1] - SFB[sbindex][0] + 1));
         }
         xfsf[sbindex] = sum;
     }
