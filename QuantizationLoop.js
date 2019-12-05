@@ -137,6 +137,8 @@ function HuffmanEncodeQuantizedSpectrum(qspect) {
         let BigvaluesEndIndex = BigvaluesPartition[1] - 1;
         for(let sfb = 0; sfb < SFBands.length; sfb++) {
             let sfbPartition = SFBands[sfb];
+            // 因最后一个SFB并未延伸到频谱末端，所以应将其延伸到频谱末端
+            if(sfb === SFBands.length - 1) sfbPartition = [sfbPartition[0], qspect.length-1];
             if(BigvaluesEndIndex > 0 && BigvaluesEndIndex >= sfbPartition[0] && BigvaluesEndIndex <= sfbPartition[1]) {
                 LastSFBIndexOfBigvalues = sfb;
                 break;
