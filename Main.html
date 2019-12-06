@@ -7,7 +7,37 @@
     <link rel="stylesheet" type="text/css" href="./style/style.css" charset="utf-8"/>
 </head>
 <body>
-<div class="Main"></div>
+<div class="Main">
+    <div class="Title">
+        🎵 调试工具</span>
+    </div>
+
+    <div class="Block" style="text-align: center;">
+        <div style="text-align: left; line-height: 23px; color:#666;">
+            ⭐ 打开控制台以查看输出信息
+        </div>
+        <div style="text-align: left; margin: 10px 0; padding: 10px; border-radius: 5px; background: #e1f5ff; font-weight: bold;">
+            打开音频文件（WAV、MP3等均可）：<input type="file" id="fileSelector" name="files[]" multiple>
+        </div>
+
+        <div style="margin: 10px 0;">
+            <button id="play" data-state="stopped"><span id="playLabel">播放</span><svg id="ThrobberPlaying" version="1" xmlns="http://www.w3.org/2000/svg" width="16" height="16" style="transform: scale(1); display: none; position: relative; top: 3px; left: 3px;"><style>@keyframes rotate{0%{transform:rotate(0deg)}to{transform:rotate(360deg)}}@keyframes fillunfill{0%{stroke-dashoffset:32.3}50%{stroke-dashoffset:0}to{stroke-dashoffset:-31.9}}@keyframes rot{0%{transform:rotate(0deg)}to{transform:rotate(-360deg)}}@keyframes colors{0%,to{stroke:#00aaff}}</style><g style="animation-duration:1568.63ms;animation-iteration-count:infinite;animation-name:rotate;animation-timing-function:linear;transform-origin:50% 50%;width:16px;height:16px"><path fill="none" d="M8 1.125A6.875 6.875 0 1 1 1.125 8" stroke-width="2.25" stroke-linecap="round" style="animation-duration:1333ms,5332ms,5332ms;animation-fill-mode:forwards;animation-iteration-count:infinite,infinite,infinite;animation-name:fillunfill,rot,colors;animation-play-state:running,running,running;animation-timing-function:cubic-bezier(.4,0,.2,1),steps(4),linear;transform-origin:50% 50%" stroke-dasharray="32.4" stroke-dashoffset="32.4"></path></g></svg></button>
+        </div>
+        <div class="ProcessbarContainer">
+            <div id="progressbar" style="height: 100%; background-color: #00aaff; width: 5px;"></div>
+            <div id="timer" style="position: absolute; top: 0; left: 0; font-size: 14px; height: 15px; line-height: 15px; margin: 5px 10px;"></div>
+        </div>
+
+        <!-- <canvas id="osc0"  height="100px" width="300px"></canvas></td><td><canvas id="osc1"  height="100px" width="300px"></canvas> -->
+
+    </div>
+
+    <div style="text-align: center; font-size: 13px; color:#888888; margin: 20px auto; line-height: 20px;">
+        <div><a href="https://github.com/mikukonai/Otonashi">Project Otonashi</a></div>
+        <div>Copyright &copy; 2019.11.14 Mikukonai</div>
+    </div>
+
+</div>
 
 <script src="./script/jquery.min.js"></script>
 

@@ -29,7 +29,7 @@ function CalculateQuantDistortion(xr, ix, quantStep, blockType) {
     for(let sbindex = 0; sbindex < SFB.length; sbindex++) {
         let sum = 0;
         for(let i = SFB[sbindex][0]; i <= SFB[sbindex][1]; i++) {
-            let temp1 = Math.abs(xr[i]) - Math.pow(ix[i], (4/3)) * Math.pow(ROOT_2_4, quantStep);
+            let temp1 = Math.abs(xr[i]) - Math.pow(Math.abs(ix[i]), (4/3)) * Math.pow(ROOT_2_4, quantStep); // NOTE 与标准原文的差异：给ix[i]加了绝对值
             sum += (temp1 * temp1 / (SFB[sbindex][1] - SFB[sbindex][0] + 1));
         }
         xfsf[sbindex] = sum;
@@ -223,9 +223,9 @@ function HuffmanEncodeQuantizedSpectrum(qspect) {
             let htable = HuffmanTableDuple[i];
             if(htable === null) continue;
             let huffmanTableMaxValue = htable.maxvalue;
-            if(tableSelect0 < 0 && MaxValue0 < huffmanTableMaxValue) { tableSelect0 = i; }
-            if(tableSelect1 < 0 && MaxValue1 < huffmanTableMaxValue) { tableSelect1 = i; }
-            if(tableSelect2 < 0 && MaxValue2 < huffmanTableMaxValue) { tableSelect2 = i; }
+            if(tableSelect0 < 0 && MaxValue0 <= huffmanTableMaxValue) { tableSelect0 = i; }
+            if(tableSelect1 < 0 && MaxValue1 <= huffmanTableMaxValue) { tableSelect1 = i; }
+            if(tableSelect2 < 0 && MaxValue2 <= huffmanTableMaxValue) { tableSelect2 = i; }
             // 如果所有的表格都已确定，则终止循环
             if(tableSelect0 >= 0 && tableSelect1 >= 0 && tableSelect2 >= 0) break;
         }
@@ -337,3 +337,27 @@ function ReorderShortBlockSpectrum(qspects) {
 //     qspects[2][i] = i + 20000;
 // }
 // console.log(ReorderShortBlockSpectrum(qspects));
+
+/**
+ * @description 576点短块频谱拆分成3个短块频谱
+ */
+function ReconstructShortBlockSpectrum(spect576) {
+    let spect = new Array();
+        spect[0] = new Array();
+        spect[1] = new Array();
+        spect[2] = new Array();
+    let SFBands = ScaleFactorBands[SAMPLE_RATE][SHORT_BLOCK];
+    let offset = 0;
+    for(let sfb = 0; sfb < SFBands.length; sfb++) {
+        let sfbPartition = SFBands[sfb];
+        // 因最后一个SFB并未延伸到频谱末端(191)，所以应将其延伸到频谱末端
+        if(sfb === SFBands.length - 1) sfbPartition = [sfbPartition[0], 191];
+        for(let w = 0; w < 3; w++) {
+            for(let i = sfbPartition[0]; i <= sfbPartition[1]; i++) {
+                spect[w][i] = spect576[offset];
+                offset++;
+            }
+        }
+    }
+    return spect;
+}

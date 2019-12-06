@@ -27,7 +27,7 @@ const WINDOW_START  = 1;
 const WINDOW_SHORT  = 2;
 const WINDOW_STOP   = 3;
 
-const SYSTEM_CONSTANT = 8; // Subclause 2.4.3.4.7.1 @ p.35
+// const SYSTEM_CONSTANT = 8; // Subclause 2.4.3.4.7.1 @ p.35
 
 
 
