@@ -79,3 +79,18 @@ const LOG2 = {
     '1':0,      '2':1,      '4':2,      '8':3,      '16':4,      '32':5,      '64':6,      '128':7,      '256':8,
     '512':9,    '1024':10,  '2048':11,  '4096':12,  '8192':13,   '16384':14,  '32768':15,  '65536':16,
 };
+
+
+/**
+ * @description 返回某正整数的指定长度的二进制串
+ */
+function BinaryString(intNumber, length) {
+    let seq = [];
+    for(let i = 0; i < length; i++) {
+        if((intNumber & 1) > 0) seq.unshift("1");
+        else seq.unshift("0");
+        intNumber = intNumber >> 1;
+    }
+    return seq.join("");
+}
+

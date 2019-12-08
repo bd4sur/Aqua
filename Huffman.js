@@ -440,4 +440,111 @@ console.log(buffer.join(""));
  */
 
 
+/**
+ * @description 哈夫曼树
+ */
 
+function HuffmanTree() {
+    this.isEnd = false;
+    this.nexts = new Array();
+    return this;
+}
+
+HuffmanTree.prototype.AddCode = function(bincode, key) {
+    let currentTree = this;
+    for(let i = 0; i < bincode.length; i++) {
+        let currentBit = (bincode[i] === "0") ? 0 : 1;
+        let nextTree = currentTree.nexts[currentBit];
+        if(!nextTree) {
+            nextTree = new HuffmanTree();
+            currentTree.nexts[currentBit] = nextTree;
+        }
+        currentTree = nextTree;
+
+        if(i === bincode.length - 1) {
+            currentTree.key = key;
+            currentTree.isEnd = true;
+        }
+    }
+    return this;
+};
+
+HuffmanTree.prototype.Decode = function(str) {
+    let currentTree = this;
+    for(let i = 0; i < str.length; i++) {
+        let bit = (str[i] === "0") ? 0 : 1;
+        currentTree = currentTree.nexts[bit];
+        if(currentTree.isEnd === true) {
+            return {
+                key: currentTree.key,
+                runlength: i+1
+            };
+        }
+    }
+    return null;
+}
+
+
+/**
+ * @description 初始化哈夫曼树
+ */
+function HuffmanTreeInit() {
+    let HuffmanTreeDuple = new Array();
+    let HuffmanTreeQuadruple = new Array();
+    // 大值表
+    for(let i = 0; i < HuffmanTableDuple.length; i++) {
+        if(HuffmanTableDuple[i] === null) continue;
+        let htree = new HuffmanTree();
+        let htable = HuffmanTableDuple[i].table;
+        for(let key in htable) {
+            let hcode = htable[key];
+            htree.AddCode(hcode, key);
+        }
+        HuffmanTreeDuple[i] = htree;
+    }
+    // 小值表
+    let htree0 = new HuffmanTree();
+    let htree1 = new HuffmanTree();
+    for(let i = 0; i < 16; i++) {
+        let key = BinaryString(i, 4).split("").join(" ");
+        let hcode0 = HuffmanTableQuadruple[0][i];
+        let hcode1 = HuffmanTableQuadruple[1][i];
+        htree0.AddCode(hcode0, key);
+        htree1.AddCode(hcode1, key);
+    }
+    HuffmanTreeQuadruple[0] = htree0;
+    HuffmanTreeQuadruple[1] = htree1;
+
+    return {
+        HuffmanTreeQuadruple: HuffmanTreeQuadruple,
+        HuffmanTreeDuple: HuffmanTreeDuple
+    };
+}
+
+/**
+ * @description 使用选定的哈夫曼树解码字符串
+ */
+function HuffmanDecode(str, htrees, htreeIndex) {
+    let hresult = htrees[htreeIndex].Decode(str)
+    let key = hresult.key.split(" ");
+    if(key.length === 2) {
+        return {
+            runlength: hresult.runlength,
+            x: parseInt(key[0]),
+            y: parseInt(key[1])
+        };
+    }
+    else if(key.length === 4) {
+        return {
+            runlength: hresult.runlength,
+            v: parseInt(key[0]),
+            w: parseInt(key[1]),
+            x: parseInt(key[2]),
+            y: parseInt(key[3])
+        };
+    }
+}
+
+// let htrees = HuffmanTreeInit();
+// let res = HuffmanDecode("00010000000000000000", htrees.HuffmanTreeDuple, 15);
+// console.log(res);

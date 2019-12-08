@@ -109,19 +109,6 @@ function EncodeDuple(x, y, tableSelect) {
 }
 
 /**
- * @description 返回某正整数的指定长度的二进制串
- */
-function BinaryString(intNumber, length) {
-    let seq = [];
-    for(let i = 0; i < length; i++) {
-        if((intNumber & 1) > 0) seq.unshift("1");
-        else seq.unshift("0");
-        intNumber = intNumber >> 1;
-    }
-    return seq.join("");
-}
-
-/**
  * @description 576点量化频谱分区：一般分为大值区（bigvalues）、小值区（smallvalues）和零值区（zeros）
  */
 function PartitionQuantizedSpectrum(qspectrum576) {
