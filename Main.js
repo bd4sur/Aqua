@@ -100,6 +100,7 @@ function MPEG(PCMData) {
     }
 
     for(let GranuleOffset = 0; GranuleOffset < PCMData.length; GranuleOffset += GRANULE_LENGTH) {
+
         // 分析子带滤波
         currentGranuleSubbands = AnalysisSubbandFilter(PCMData, GranuleOffset);
 
@@ -107,78 +108,21 @@ function MPEG(PCMData) {
         let isAttack = (Math.random() > 0.5) ? true : false;
         currentWindowType = SwitchWindowType(prevWindowType, isAttack);
         console.log(`[Granule_${GranuleCount}] 窗口类型：${currentWindowType}`);
+        let xmin = new Array();
+        for(let i = 0; i < 21; i++) { // 应当区分长短块
+            xmin[i] = 1e-8;
+        }
 
         // 时频变换：可能是长块，可能是短块，由currentWindowType决定。
         let Spectrum = CalculateGranuleSpectrum(currentGranuleSubbands, prevGranuleSubbands, currentWindowType);
+        console.log(`[Granule_${GranuleCount}] 频谱：`);
+        console.log(Spectrum);
 
-        // 量化（内层循环：码率控制循环）
-        console.log(`[Granule_${GranuleCount}] === 内层循环开始 ===`);
-        let globalGain;
-        let huffman;
-        let QuantizedSpectrum576;
-        for(let qquant = 0; qquant < 256; qquant++) { // global_gain为8bit
-            let quantanf;
-            // 长块
-            if(currentWindowType !== WINDOW_SHORT) {
-                // 量化
-                let LongBlockSpectrum = Spectrum[0];
-                let QuantizedLongBlockSpectrum = new Array();
-                quantanf = 8 * Math.log(SFM(LongBlockSpectrum));
-                for(let i = 0; i < LongBlockSpectrum.length; i++) {
-                    let xr = LongBlockSpectrum[i];
-                    QuantizedLongBlockSpectrum[i] = Math.sign(xr) * Quantize(xr, quantanf + qquant);
-                }
-                QuantizedSpectrum576 = QuantizedLongBlockSpectrum;
+        console.log(`[Granule_${GranuleCount}] 量化循环开始`);
+        let sf = OuterLoop(Spectrum, currentWindowType, 3000, xmin);
+        console.log(`[Granule_${GranuleCount}] 尺度因子结果：`);
+        console.log(sf);
 
-                globalGain = quantanf + qquant + 210;
-            }
-            // 短块
-            else {
-                let subblockGain = new Array()
-                let QuantizedShortBlockSpectrum = new Array();
-                // 对每个短块作量化
-                for(let w = 0; w < 3; w++) {
-                    let SubblockSpectrum = Spectrum[w];
-                    let QuantizedSubblockSpectrum = new Array();
-                    quantanf = 8 * Math.log(SFM(SubblockSpectrum));
-                    for(let i = 0; i < SubblockSpectrum.length; i++) {
-                        let xr = SubblockSpectrum[i];
-                        QuantizedSubblockSpectrum[i] = Math.sign(xr) * Quantize(xr, quantanf + qquant);
-                    }
-                    QuantizedShortBlockSpectrum[w] = QuantizedSubblockSpectrum;
-
-                    subblockGain[w] = quantanf + qquant + 210;
-                }
-                // 将短块频谱重排成连续的576点频谱
-                let ReorderedQuantizedShortBlockSpectrum = ReorderShortBlockSpectrum(QuantizedShortBlockSpectrum);
-                QuantizedSpectrum576 = ReorderedQuantizedShortBlockSpectrum;
-
-                /**
-                 * TODO 不清楚subblockGain是如何计算的，以及subblockGain与globalGain的关系。因此这里用三个子块的量化参数的最大值代替整个短块granule的globalGain。
-                 * 至于globalGain与每个子块的实际量化参数之间的差异，由scalefactor来抵消掉。
-                 */ 
-                globalGain = Math.max(subblockGain[0], subblockGain[1], subblockGain[2]);
-            }
-
-            // 哈夫曼编码
-            huffman = HuffmanEncodeQuantizedSpectrum(QuantizedSpectrum576);
-
-            // 检查编码结果
-            if(huffman === null) {
-                continue; // 重新量化
-            }
-            else {
-                if(huffman.CodeString.length < 2000) {
-                    console.log(`[Granule_${GranuleCount}] 量化步数qquant：${qquant}`);
-                    console.log(`[Granule_${GranuleCount}] Huffman码长：${huffman.CodeString.length}`);
-                    console.log(`[Granule_${GranuleCount}] globalGain：${globalGain}`);
-                    console.log(`[Granule_${GranuleCount}] 编码结果：`);
-                    console.log(huffman);
-                    console.log(`[Granule_${GranuleCount}] === 内层循环结束 ===`);
-                    break; // 满足条件退出
-                }
-            }
-        }
 
         // 反量化
         /*
@@ -191,7 +135,7 @@ function MPEG(PCMData) {
         }
 
         if(currentWindowType !== WINDOW_SHORT) {
-            let ReQuantized = ReQuantize(QuantizedSpectrum576, globalGain);
+            let ReQuantized = ReQuantize(quantResult.quantizedSpectrum576, globalGain);
             // console.log(`[Granule_${GranuleCount}] 反量化结果：`);
             // console.log(ReQuantized);
 
@@ -203,7 +147,7 @@ function MPEG(PCMData) {
             console.log(ratio);
         }
         else {
-            let ReQuantized = ReQuantize(QuantizedSpectrum576, globalGain);
+            let ReQuantized = ReQuantize(quantResult.quantizedSpectrum576, globalGain);
             let reconstructedRequantized = ReconstructShortBlockSpectrum(ReQuantized);
             for(let w = 0; w < 3; w++) {
                 let ratio = new Array();
@@ -215,25 +159,6 @@ function MPEG(PCMData) {
             }
         }
         */
-
-
-
-        // 计算量化误差
-        if(currentWindowType !== WINDOW_SHORT) {
-            let distortion = CalculateQuantDistortion(Spectrum[0], QuantizedSpectrum576, globalGain - 210, LONG_BLOCK);
-            console.log(`[Granule_${GranuleCount}] 长块量化误差：`);
-            console.log(distortion);
-        }
-        else {
-            let reconstructedQuantized = ReconstructShortBlockSpectrum(QuantizedSpectrum576);
-            let distortion0 = CalculateQuantDistortion(Spectrum[0], reconstructedQuantized[0], globalGain - 210, SHORT_BLOCK);
-            let distortion1 = CalculateQuantDistortion(Spectrum[1], reconstructedQuantized[1], globalGain - 210, SHORT_BLOCK);
-            let distortion2 = CalculateQuantDistortion(Spectrum[2], reconstructedQuantized[2], globalGain - 210, SHORT_BLOCK);
-            // console.log(`[Granule_${GranuleCount}] 短块量化误差：`);
-            console.log(distortion0);
-            console.log(distortion1);
-            console.log(distortion2);
-        }
 
         console.log(`=============================================================`);
 
