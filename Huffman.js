@@ -522,10 +522,10 @@ function HuffmanTreeInit() {
 }
 
 /**
- * @description 使用选定的哈夫曼树解码字符串
+ * @description 使用选定的哈夫曼树解码字符串（仅匹配前缀）
  */
-function HuffmanDecode(str, htrees, htreeIndex) {
-    let hresult = htrees[htreeIndex].Decode(str)
+function DecodePrefix(str, htree) {
+    let hresult = htree.Decode(str)
     let key = hresult.key.split(" ");
     if(key.length === 2) {
         return {
@@ -546,5 +546,5 @@ function HuffmanDecode(str, htrees, htreeIndex) {
 }
 
 // let htrees = HuffmanTreeInit();
-// let res = HuffmanDecode("00010000000000000000", htrees.HuffmanTreeDuple, 15);
+// let res = DecodePrefix("00010000000000000000", htrees.HuffmanTreeDuple[15]);
 // console.log(res);

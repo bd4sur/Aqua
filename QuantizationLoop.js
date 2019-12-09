@@ -150,7 +150,7 @@ function HuffmanEncode(qspectrum576) {
 
     // 首先检查最大值是否超过 8191+15=8206，如果超过，则返回null
     for(let i = 0; i < qspectrum576.length; i++) {
-        if(qspectrum576[i] > 8206) return null;
+        if(Math.abs(qspectrum576[i]) > 8206) return null;
     }
 
     // 对量化后的频谱分区
@@ -200,13 +200,13 @@ function HuffmanEncode(qspectrum576) {
         // 计算每个region的最大值，选取不同的Huffman编码表，保留码表编号到table_select
         let MaxValue0 = -1, MaxValue1 = -1, MaxValue2 = -1;
         for(let i = 0; i < region01; i++) {
-            if(qspectrum576[i] > MaxValue0) { MaxValue0 = qspectrum576[i]; }
+            if(Math.abs(qspectrum576[i]) > MaxValue0) { MaxValue0 = Math.abs(qspectrum576[i]); }
         }
         for(let i = region01; i < region12; i++) {
-            if(qspectrum576[i] > MaxValue1) { MaxValue1 = qspectrum576[i]; }
+            if(Math.abs(qspectrum576[i]) > MaxValue1) { MaxValue1 = Math.abs(qspectrum576[i]); }
         }
         for(let i = region12; i < BigvaluesPartition[1]; i++) {
-            if(qspectrum576[i] > MaxValue2){ MaxValue2 = qspectrum576[i]; }
+            if(Math.abs(qspectrum576[i]) > MaxValue2){ MaxValue2 = Math.abs(qspectrum576[i]); }
         }
 
         let tableSelect0 = -1, tableSelect1 = -1, tableSelect2 = -1;
@@ -245,7 +245,7 @@ function HuffmanEncode(qspectrum576) {
             if(huffman.linbitsY !== null) { codeString1 += String(huffman.linbitsY); }
             if(y !== 0) { codeString1 += String((y < 0) ? "1" : "0"); }
         }
-        for(let i = region12; i < BigvaluesPartition[i]; i += 2) {
+        for(let i = region12; i < BigvaluesPartition[1]; i += 2) {
             let x = qspectrum576[i], y = qspectrum576[i+1];
             let huffman = EncodeDuple(x, y, tableSelect2);
             codeString2 += String(huffman.huffmanCode);
@@ -292,6 +292,7 @@ function HuffmanEncode(qspectrum576) {
     let HuffmanCodeString = BigvaluesCodeString + SmallvaluesCodeString;
 
     return {
+        "Spectrum576": qspectrum576,
         "Partition": partition,
         "CodeString": HuffmanCodeString,
         "Bigvalues": Bigvalues,

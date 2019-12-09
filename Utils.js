@@ -94,3 +94,15 @@ function BinaryString(intNumber, length) {
     return seq.join("");
 }
 
+/**
+ * @description 二进制串转无符号整数
+ */
+function BinaryStringToUint(bstr) {
+    let sum = 0;
+    for(let i = bstr.length; i>= 0; i--) {
+        if(bstr[i] === "1") {
+            sum += (1 << (bstr.length - i - 1));
+        }
+    }
+    return sum;
+}
