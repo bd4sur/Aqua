@@ -232,27 +232,27 @@ function HuffmanEncode(qspectrum576) {
             let huffman = EncodeDuple(x, y, tableSelect0);
             codeString0 += String(huffman.huffmanCode);
             if(huffman.linbitsX !== null) { codeString0 += String(huffman.linbitsX); }
-            if(x !== 0) { codeString0 += String((x > 0) ? "1" : "0"); }
+            if(x !== 0) { codeString0 += String((x < 0) ? "1" : "0"); }
             if(huffman.linbitsY !== null) { codeString0 += String(huffman.linbitsY); }
-            if(y !== 0) { codeString0 += String((y > 0) ? "1" : "0"); }
+            if(y !== 0) { codeString0 += String((y < 0) ? "1" : "0"); }
         }
         for(let i = region01; i < region12; i += 2) {
             let x = qspectrum576[i], y = qspectrum576[i+1];
             let huffman = EncodeDuple(x, y, tableSelect1);
             codeString1 += String(huffman.huffmanCode);
             if(huffman.linbitsX !== null) { codeString1 += String(huffman.linbitsX); }
-            if(x !== 0) { codeString1 += String((x > 0) ? "1" : "0"); }
+            if(x !== 0) { codeString1 += String((x < 0) ? "1" : "0"); }
             if(huffman.linbitsY !== null) { codeString1 += String(huffman.linbitsY); }
-            if(y !== 0) { codeString1 += String((y > 0) ? "1" : "0"); }
+            if(y !== 0) { codeString1 += String((y < 0) ? "1" : "0"); }
         }
         for(let i = region12; i < BigvaluesPartition[i]; i += 2) {
             let x = qspectrum576[i], y = qspectrum576[i+1];
             let huffman = EncodeDuple(x, y, tableSelect2);
             codeString2 += String(huffman.huffmanCode);
             if(huffman.linbitsX !== null) { codeString2 += String(huffman.linbitsX); }
-            if(x !== 0) { codeString2 += String((x > 0) ? "1" : "0"); }
+            if(x !== 0) { codeString2 += String((x < 0) ? "1" : "0"); }
             if(huffman.linbitsY !== null) { codeString2 += String(huffman.linbitsY); }
-            if(y !== 0) { codeString2 += String((y > 0) ? "1" : "0"); }
+            if(y !== 0) { codeString2 += String((y < 0) ? "1" : "0"); }
         }
 
         BigvaluesCodeString = String(codeString0) + String(codeString1) + String(codeString2);
@@ -266,16 +266,16 @@ function HuffmanEncode(qspectrum576) {
         for(let i = SmallvaluesPartition[0]; i < SmallvaluesPartition[1]; i += 4) {
             let v = qspectrum576[i], w = qspectrum576[i+1], x = qspectrum576[i+2], y = qspectrum576[i+3];
             codeStringA += String(EncodeQuadruple(v, w, x, y, 0));
-            if(v !== 0) { codeStringA += String((v > 0) ? "1" : "0"); }
-            if(w !== 0) { codeStringA += String((w > 0) ? "1" : "0"); }
-            if(x !== 0) { codeStringA += String((x > 0) ? "1" : "0"); }
-            if(y !== 0) { codeStringA += String((y > 0) ? "1" : "0"); }
+            if(v !== 0) { codeStringA += String((v < 0) ? "1" : "0"); }
+            if(w !== 0) { codeStringA += String((w < 0) ? "1" : "0"); }
+            if(x !== 0) { codeStringA += String((x < 0) ? "1" : "0"); }
+            if(y !== 0) { codeStringA += String((y < 0) ? "1" : "0"); }
 
             codeStringB += String(EncodeQuadruple(v, w, x, y, 1));
-            if(v !== 0) { codeStringB += String((v > 0) ? "1" : "0"); }
-            if(w !== 0) { codeStringB += String((w > 0) ? "1" : "0"); }
-            if(x !== 0) { codeStringB += String((x > 0) ? "1" : "0"); }
-            if(y !== 0) { codeStringB += String((y > 0) ? "1" : "0"); }
+            if(v !== 0) { codeStringB += String((v < 0) ? "1" : "0"); }
+            if(w !== 0) { codeStringB += String((w < 0) ? "1" : "0"); }
+            if(x !== 0) { codeStringB += String((x < 0) ? "1" : "0"); }
+            if(y !== 0) { codeStringB += String((y < 0) ? "1" : "0"); }
         }
 
         if(codeStringA.length <= codeStringB.length) {
