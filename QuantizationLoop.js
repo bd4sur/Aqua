@@ -141,7 +141,7 @@ function PartitionQuantizedSpectrum(qspectrum576) {
 /**
  * @description 对量化频谱作哈夫曼编码
  */
-function HuffmanEncode(qspectrum576) {
+function HuffmanEncode(qspectrum576, blockType) {
     let Bigvalues = -1,
         BigvalueTableSelect = new Array(),
         Region0Count = -1,
@@ -168,34 +168,78 @@ function HuffmanEncode(qspectrum576) {
     // 保存分割点信息到region0_count和region1_count，具体是子区间0和1所包含的SFB数量减一。
     // 注意：对于短块部分（即非混合块模式的全部短块，以及混合块模式下高频方向的短块部分），这两个数量应相应地乘以3。详见p27。
     if(BigvaluesPartition[1] > 0) {
-        // 确定大值区的尺度因子频带数目，计算分割点
+        let region01 = 0, region12 = 0;
         let LastSFBIndexOfBigvalues = -1;
         let BigvaluesEndIndex = BigvaluesPartition[1] - 1;
-        for(let sfb = 0; sfb < SFBands.length; sfb++) {
-            let sfbPartition = SFBands[sfb];
-            // 因最后一个SFB并未延伸到频谱末端，所以应将其延伸到频谱末端
-            if(sfb === SFBands.length - 1) sfbPartition = [sfbPartition[0], qspectrum576.length-1];
-            if(BigvaluesEndIndex > 0 && BigvaluesEndIndex >= sfbPartition[0] && BigvaluesEndIndex <= sfbPartition[1]) {
-                LastSFBIndexOfBigvalues = sfb;
-                break;
+        if(blockType === LONG_BLOCK) {
+            // 确定大值区的尺度因子频带数目，计算分割点
+            for(let sfb = 0; sfb < SFBands.length; sfb++) {
+                let sfbPartition = SFBands[sfb];
+                // 因最后一个SFB并未延伸到频谱末端，所以应将其延伸到频谱末端
+                if(sfb === SFBands.length - 1) sfbPartition = [sfbPartition[0], qspectrum576.length-1];
+                if(BigvaluesEndIndex > 0 && BigvaluesEndIndex >= sfbPartition[0] && BigvaluesEndIndex <= sfbPartition[1]) {
+                    LastSFBIndexOfBigvalues = sfb;
+                    break;
+                }
             }
-        }
 
-        let SFBNumberInBigvalues = LastSFBIndexOfBigvalues + 1;
-        let Region0_SFBNum = Math.round(SFBNumberInBigvalues / 3); // 注意：作为sideinfo的值应减1
-        let Region1_SFBNum = SFBNumberInBigvalues - Math.round(SFBNumberInBigvalues / 4) - Region0_SFBNum;
-        let Region2_SFBNum = SFBNumberInBigvalues - Region0_SFBNum - Region1_SFBNum;
+            // 计算各个region的SFB数量
+            let SFBNumberInBigvalues = LastSFBIndexOfBigvalues + 1;
+            let Region0_SFBNum = Math.round(SFBNumberInBigvalues / 3); // 注意：作为sideinfo的值应减1
+            let Region1_SFBNum = SFBNumberInBigvalues - Math.round(SFBNumberInBigvalues / 4) - Region0_SFBNum;
+            let Region2_SFBNum = SFBNumberInBigvalues - Region0_SFBNum - Region1_SFBNum;
 
-        Region0Count = Region0_SFBNum - 1;
-        Region1Count = Region1_SFBNum - 1;
-        if(Region1_SFBNum <= 0) {
-            Region1_SFBNum = Region2_SFBNum;
-            Region2_SFBNum = 0;
+            // 计算SFB边界与region0/1_count
+            if(Region1_SFBNum <= 0) {
+                Region1_SFBNum = Region2_SFBNum;
+                Region2_SFBNum = 0;
+            }
+            Region0Count = Region0_SFBNum - 1;
             Region1Count = Region1_SFBNum - 1;
-        }
 
-        let region01 = SFBands[Region0_SFBNum][0]; // Region 1 的起点
-        let region12 = SFBands[Region0_SFBNum + Region1_SFBNum][0]; // Region 2 的起点
+            region01 = SFBands[Region0_SFBNum][0]; // Region 1 的起点
+            region12 = SFBands[Region0_SFBNum + Region1_SFBNum][0]; // Region 2 的起点
+        }
+        else if(blockType === SHORT_BLOCK) {
+            // 确定大值区的尺度因子频带数目，计算分割点
+            let sfbRightBoundry = -1; // NOTE 因为是计算右边界，所以从-1开始累加
+            for(let sfb = 0; sfb < SFBands.length; sfb++) {
+                let sfbPartition = SFBands[sfb];
+                // 576点频谱中每个SFB都包含3个子块
+                sfbRightBoundry += (sfbPartition[1] - sfbPartition[0] + 1) * 3;
+                // 因最后一个SFB并未延伸到频谱末端，所以应将其延伸到频谱末端
+                if(sfb === SFBands.length - 1) sfbRightBoundry = 576;
+                if(BigvaluesEndIndex > 0 && sfbRightBoundry >= BigvaluesEndIndex) {
+                    LastSFBIndexOfBigvalues = sfb;
+                    break;
+                }
+            }
+
+            // 计算各个region的SFB数量
+            let SFBNumberInBigvalues = LastSFBIndexOfBigvalues + 1;
+            let Region0_SFBNum = Math.round(SFBNumberInBigvalues / 3); // 注意：作为sideinfo的值应减1
+            let Region1_SFBNum = SFBNumberInBigvalues - Math.round(SFBNumberInBigvalues / 4) - Region0_SFBNum;
+            let Region2_SFBNum = SFBNumberInBigvalues - Region0_SFBNum - Region1_SFBNum;
+
+            // 计算SFB边界与region0/1_count
+            if(Region1_SFBNum <= 0) {
+                Region1_SFBNum = Region2_SFBNum;
+                Region2_SFBNum = 0;
+            }
+            /**
+             * 短块情况下，以下两个值为标准规定，实际上并不会被编码到边信息中 @reference p26
+             * 目前暂时不实现混合块
+             */ 
+            Region0Count = 8;
+            Region1Count = 36;
+
+            for(let sfb = 0; sfb < 3; sfb++) { // NOTE 因为Region0Count=8，意味着有(8+1)/3=3个SFB
+                let sfbPartition = SFBands[sfb];
+                region01 += (sfbPartition[1] - sfbPartition[0] + 1) * 3;
+            }
+            // 短块没有region2，因此region12就是大值区的右边界
+            region12 = BigvaluesPartition[1];
+        }
 
         // 计算每个region的最大值，选取不同的Huffman编码表，保留码表编号到table_select
         let MaxValue0 = -1, MaxValue1 = -1, MaxValue2 = -1;
@@ -292,6 +336,7 @@ function HuffmanEncode(qspectrum576) {
     let HuffmanCodeString = BigvaluesCodeString + SmallvaluesCodeString;
 
     return {
+        "BlockType": blockType,
         "Spectrum576": qspectrum576,
         "Partition": partition,
         "CodeString": HuffmanCodeString,
