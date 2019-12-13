@@ -451,7 +451,8 @@ function InnerLoop(Spectrum, windowType, bitRateLimit) {
         }
 
         // 哈夫曼编码
-        huffman = HuffmanEncode(quantizedSpectrum576);
+        let blockType = (windowType === WINDOW_SHORT) ? SHORT_BLOCK : LONG_BLOCK;
+        huffman = HuffmanEncode(quantizedSpectrum576, blockType);
 
         // 满足条件退出
         if(huffman !== null && huffman.CodeString.length < bitRateLimit) {
