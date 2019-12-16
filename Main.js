@@ -110,13 +110,13 @@ function MPEG(PCMData) {
         console.log(`[Granule_${GranuleCount}] 窗口类型：${currentWindowType}`);
         let xmin = new Array();
         for(let i = 0; i < 21; i++) { // 应当区分长短块
-            xmin[i] = 1e-8;
+            xmin[i] = 1e-7;
         }
 
         // 时频变换：可能是长块，可能是短块，由currentWindowType决定。
         let Spectrum = CalculateGranuleSpectrum(currentGranuleSubbands, prevGranuleSubbands, currentWindowType);
-        console.log(`[Granule_${GranuleCount}] 频谱：`);
-        console.log(Spectrum);
+        // console.log(`[Granule_${GranuleCount}] 频谱：`);
+        // console.log(Spectrum);
 
         console.log(`[Granule_${GranuleCount}] 量化循环开始`);
         let sf = OuterLoop(Spectrum, currentWindowType, 3000, xmin);
@@ -132,31 +132,6 @@ function MPEG(PCMData) {
                 xr[i] = Math.sign(ix[i]) * Math.pow(Math.abs(ix[i]), (4/3)) * Math.pow(ROOT_2_4, globalGain - 210);
             }
             return xr;
-        }
-
-        if(currentWindowType !== WINDOW_SHORT) {
-            let ReQuantized = ReQuantize(quantResult.quantizedSpectrum576, globalGain);
-            // console.log(`[Granule_${GranuleCount}] 反量化结果：`);
-            // console.log(ReQuantized);
-
-            let ratio = new Array();
-            for(let i = 0; i < 576; i++) {
-                ratio[i] = ReQuantized[i] / Spectrum[0][i];
-            }
-            console.log(`[Granule_${GranuleCount}] 反量化比值：`);
-            console.log(ratio);
-        }
-        else {
-            let ReQuantized = ReQuantize(quantResult.quantizedSpectrum576, globalGain);
-            let reconstructedRequantized = ReconstructShortBlockSpectrum(ReQuantized);
-            for(let w = 0; w < 3; w++) {
-                let ratio = new Array();
-                for(let i = 0; i < 192; i++) {
-                    ratio[i] = reconstructedRequantized[w][i] / Spectrum[w][i];
-                }
-                console.log(`[Granule_${GranuleCount}] 块[${w}]反量化比值：`);
-                console.log(ratio);
-            }
         }
         */
 

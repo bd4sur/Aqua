@@ -413,7 +413,7 @@ function InnerLoop(Spectrum, windowType, bitRateLimit) {
             // 量化
             let LongBlockSpectrum = Spectrum[0];
             let QuantizedLongBlockSpectrum = new Array();
-            quantanf = 8 * Math.log(SFM(LongBlockSpectrum));
+            quantanf = Math.round(8 * Math.log(SFM(LongBlockSpectrum)));
             for(let i = 0; i < LongBlockSpectrum.length; i++) {
                 let xr = LongBlockSpectrum[i];
                 QuantizedLongBlockSpectrum[i] = Math.sign(xr) * Quantize(xr, quantanf + qquant);
@@ -424,30 +424,19 @@ function InnerLoop(Spectrum, windowType, bitRateLimit) {
         }
         // 短块
         else {
-            subblockGain = new Array()
-            let QuantizedShortBlockSpectrum = new Array();
-            // 对每个短块作量化
-            for(let w = 0; w < 3; w++) {
-                let SubblockSpectrum = Spectrum[w];
-                let QuantizedSubblockSpectrum = new Array();
-                quantanf = 8 * Math.log(SFM(SubblockSpectrum));
-                for(let i = 0; i < SubblockSpectrum.length; i++) {
-                    let xr = SubblockSpectrum[i];
-                    QuantizedSubblockSpectrum[i] = Math.sign(xr) * Quantize(xr, quantanf + qquant);
-                }
-                QuantizedShortBlockSpectrum[w] = QuantizedSubblockSpectrum;
+            // 将短块频谱重排成连续的576点频谱，并对其量化
+            // NOTE 参考dist10，所有子块是同时量化的
+            let ShortBlockSpectrum576 = ReorderShortBlockSpectrum(Spectrum);
+            quantizedSpectrum576 = new Array();
 
-                subblockGain[w] = quantanf + qquant + 210;
+            quantanf = Math.round(8 * Math.log(SFM(ShortBlockSpectrum576)));
+            for(let i = 0; i < ShortBlockSpectrum576.length; i++) {
+                let xr = ShortBlockSpectrum576[i];
+                quantizedSpectrum576[i] = Math.sign(xr) * Quantize(xr, quantanf + qquant);
+                // TODO 根据dist10，此处应该加上subblock_gain，目前暂不实现
             }
-            // 将短块频谱重排成连续的576点频谱
-            let ReorderedQuantizedShortBlockSpectrum = ReorderShortBlockSpectrum(QuantizedShortBlockSpectrum);
-            quantizedSpectrum576 = ReorderedQuantizedShortBlockSpectrum;
 
-            /**
-             * TODO 不清楚subblockGain是如何计算的，以及subblockGain与globalGain的关系。因此这里用三个子块的量化参数的最大值代替整个短块granule的globalGain。
-             * 至于globalGain与每个子块的实际量化参数之间的差异，由scalefactor来抵消掉。
-             */ 
-            globalGain = Math.max(subblockGain[0], subblockGain[1], subblockGain[2]);
+            globalGain = quantanf + qquant + 210;
         }
 
         // 哈夫曼编码
@@ -472,79 +461,118 @@ function InnerLoop(Spectrum, windowType, bitRateLimit) {
 /**
  * @description 外层循环（噪声控制循环）
  */
-function OuterLoop(Spectrum, windowType, bitRateLimit, xmin) {
-    let LongBlockScalefactors = new Array();
-    let ShortBlockScalefactors = new Array();
-    let ScalefactorScale = 0;
+function OuterLoop(
+    Spectrum,      // NOTE 该值会被修改（每轮循环都会放大一个尺度因子，并重新量化、编码）
+    windowType,
+    bitRateLimit,
+    xmin           // NOTE 该值不会被修改（函数内部会拷贝一份副本）
+) {
 
-    let ifqstep = (ScalefactorScale === 0) ? 1.4142135623730951 : 2;
+    // 【量化·编码结果】
+    let quantizationResult;
 
-    let LongBlockSFBNumber = ScaleFactorBands[SAMPLE_RATE][LONG_BLOCK].length;
-    let ShortBlockSFBNumber = ScaleFactorBands[SAMPLE_RATE][SHORT_BLOCK].length;
-    // 初始化尺度因子
-    for(let i = 0; i < LongBlockSFBNumber; i++) {
-        LongBlockScalefactors[i] = 0;
-    }
-    for(let i = 0; i < ShortBlockSFBNumber; i++) {
-        ShortBlockScalefactors[i] = 0;
-    }
+    // 【循环初始化】
 
+    // 循环计数器（防止超时）
     let outerLoopCount = 0;
 
-    while(outerLoopCount < 16) {
+    // 长块SFB个数
+    let LongBlockSFBNumber = ScaleFactorBands[SAMPLE_RATE][LONG_BLOCK].length;
+    let ShortBlockSFBNumber = ScaleFactorBands[SAMPLE_RATE][SHORT_BLOCK].length;
 
+    // 初始化尺度因子
+    let LongBlockScalefactors = new Array();
+    for(let i = 0; i < LongBlockSFBNumber; i++) { LongBlockScalefactors[i] = 0; }
+    let ShortBlockScalefactors = new Array();
+        ShortBlockScalefactors[0] = new Array();
+        ShortBlockScalefactors[1] = new Array();
+        ShortBlockScalefactors[2] = new Array();
+    for(let i = 0; i < ShortBlockSFBNumber; i++) {
+        ShortBlockScalefactors[0][i] = 0;
+        ShortBlockScalefactors[1][i] = 0;
+        ShortBlockScalefactors[2][i] = 0;
+    }
+
+    // 由于循环时xmin要被分别放大，因此需要将xmin拷贝，循环时修改的是其副本
+    let xminForLong = new Array();
+    let xminForShort = new Array();
+        xminForShort[0] = new Array();
+        xminForShort[1] = new Array();
+        xminForShort[2] = new Array();
+    for(let i = 0; i < xmin.length; i++) {
+        xminForLong[i] = xmin[i];
+        xminForShort[0][i] = xmin[i];
+        xminForShort[1][i] = xmin[i];
+        xminForShort[2][i] = xmin[i];
+    }
+
+    // 用于指示短块情况下每个子块是否已经处理完成
+    let isFinished = new Array();
+    isFinished[0] = false; isFinished[1] = false; isFinished[2] = false;
+
+    while(outerLoopCount < 100) { // 超时控制
         console.log(`外层循环第 ${outerLoopCount} 次`);
 
-        // 量化（内层循环：码率控制循环）
+        // 缩放系数
+
+        let ScalefactorScale = 0;
+        let ifqstep = (ScalefactorScale === 0) ? 1.4142135623730951 : 2;
+
+        // 【内层循环：码率控制循环】
+
         console.log(`  === 内层循环开始 ===`);
-        console.log(Spectrum[0]);
-        let quantResult = InnerLoop(Spectrum, windowType, bitRateLimit);
-        console.log(`  量化步数qquant：${quantResult.qquant}`);
-        console.log(`  Huffman码长：${quantResult.huffman.CodeString.length}`);
-        console.log(`  globalGain：${quantResult.globalGain}`);
-        console.log(`  编码结果：`);
-        console.log(quantResult.huffman);
+        quantizationResult = InnerLoop(Spectrum, windowType, bitRateLimit);
+        console.log(`  量化步数qquant：${quantizationResult.qquant}`);
+        console.log(`  Huffman码长：${quantizationResult.huffman.CodeString.length}`);
+        // console.log(quantizationResult.huffman);
         console.log(`  === 内层循环结束 ===`);
 
-        // 计算量化误差
+        /////////////////////////////
+        //  长 块
+        /////////////////////////////
         if(windowType !== WINDOW_SHORT) {
-            let xfsf = CalculateQuantDistortion(Spectrum[0], quantResult.quantizedSpectrum576, quantResult.globalGain - 210, LONG_BLOCK);
-            console.log(`  长块量化误差：`);
-            console.log(xfsf);
 
-            let sfbsOverXmin = new Array();
+            // 【计算量化噪声】
 
-            // C.1.5.4.3.5
+            let xfsf = CalculateQuantDistortion(Spectrum[0], quantizationResult.quantizedSpectrum576, quantizationResult.globalGain - 210, LONG_BLOCK);
+
+            // 【预加重】（暂缓实现）
+
+
+            // 【对所有超限的SFB放大一步】 C.1.5.4.3.5
+
+            let sfbsOverXmin = new Array(); // 记录超限的SFB的index，用于判断退出条件
             for(let sbindex = 0; sbindex < LongBlockSFBNumber; sbindex++) {
-                if(xfsf[sbindex] > xmin[sbindex]) {
+                if(xfsf[sbindex] > xminForLong[sbindex]) {
                     sfbsOverXmin.push(sbindex);
-                    console.log(`SFB超限：${sbindex}`);
-                    xmin[sbindex] *= (ifqstep * ifqstep);
-                    LongBlockScalefactors[sbindex] = LongBlockScalefactors[sbindex] + 1;
+                    xminForLong[sbindex] *= (ifqstep * ifqstep);
+                    LongBlockScalefactors[sbindex]++;
                     let sfbPartition = ScaleFactorBands[SAMPLE_RATE][LONG_BLOCK][sbindex];
                     for(let i = sfbPartition[0]; i <= sfbPartition[1]; i++) {
-                        Spectrum[0][i] = Spectrum[0][i] * ifqstep;
+                        Spectrum[0][i] *= ifqstep;
                     }
                 }
             }
+            console.log(`  长块超限SFB有：${sfbsOverXmin}`);
 
-            console.log(`放大后的尺度因子频带：`);
-            console.log(LongBlockScalefactors);
+            // 【保存尺度因子】
 
             let result = {
+                BlockType: LONG_BLOCK,
                 Scalefactors: LongBlockScalefactors,
-                ScalefactorScale: ScalefactorScale
+                ScalefactorScale: ScalefactorScale,
+                QuantizationResult: quantizationResult
             };
 
-            // 检查退出条件
+            // 【检查退出条件】
+
             // 1 所有的尺度因子频带都被放大过？如果是，则退出
             let isAllSfbAmplified = true;
             for(let sb = 0; sb < LongBlockSFBNumber; sb++) {
-                if(LongBlockScalefactors[sb] <= 0) { isAllSfbAmplified = false; break; }
+                if(LongBlockScalefactors[sb] === 0) { isAllSfbAmplified = false; break; }
             }
-            if(isAllSfbAmplified === true) {
-                return result;
-            }
+            if(isAllSfbAmplified === true) { return result; }
+
             // 2 尺度因子的值是否有超过其各自的动态范围？如果有超过，则退出
             let isScalefactorExceeded = false;
             for(let sb = 0; sb <= 10; sb++) {
@@ -553,29 +581,101 @@ function OuterLoop(Spectrum, windowType, bitRateLimit, xmin) {
             for(let sb = 11; sb <= 20; sb++) {
                 if(LongBlockScalefactors[sb] > 7) { isScalefactorExceeded = true; break; }
             }
-            if(isScalefactorExceeded === true) {
-                return result;
-            }
+            if(isScalefactorExceeded === true) { return result; }
+
             // 3 还有超限的尺度因子频带吗？如果没有，则退出
-            if(sfbsOverXmin.length <= 0) {
-                return result;
-            }
+            if(sfbsOverXmin.length <= 0) { return result; }
+
         }
+        /////////////////////////////
+        //  短 块
+        /////////////////////////////
         else {
-            // let reconstructedQuantized = ReconstructShortBlockSpectrum(quantResult.quantizedSpectrum576);
-            // let distortion0 = CalculateQuantDistortion(Spectrum[0], reconstructedQuantized[0], quantResult.globalGain - 210, SHORT_BLOCK);
-            // let distortion1 = CalculateQuantDistortion(Spectrum[1], reconstructedQuantized[1], quantResult.globalGain - 210, SHORT_BLOCK);
-            // let distortion2 = CalculateQuantDistortion(Spectrum[2], reconstructedQuantized[2], quantResult.globalGain - 210, SHORT_BLOCK);
-            // console.log(`  短块量化误差：`);
-            // console.log(distortion0);
-            // console.log(distortion1);
-            // console.log(distortion2);
-            return {
-                Scalefactors: ShortBlockScalefactors,
-                ScalefactorScale: ScalefactorScale
-            };
-        }
+            // 首先将量化后的576点频谱分解为3个192点（量化后的）频谱
+            let ShortBlockSpectrums = ReconstructShortBlockSpectrum(quantizationResult.quantizedSpectrum576);
+
+            // 分别处理每个子块的尺度因子
+            for(let window = 0; window < 3; window++) {
+                // 跳过已经完成的子块
+                if(isFinished[window] === true) {
+                    console.log(`  短块[${window}]已处理完毕，跳过。`);
+                    continue;
+                }
+
+                let quantizedShortSpectrum = ShortBlockSpectrums[window];
+
+                // 【计算量化噪声】
+
+                let xfsf = CalculateQuantDistortion(Spectrum[window], quantizedShortSpectrum, quantizationResult.globalGain - 210, SHORT_BLOCK);
+
+                // 【预加重】（暂缓实现）
+
+
+                // 【对所有超限的SFB放大一步】 C.1.5.4.3.5
+
+                let sfbsOverXmin = new Array(); // 记录超限的SFB的index，用于判断退出条件
+                for(let sbindex = 0; sbindex < ShortBlockSFBNumber; sbindex++) {
+                    if(xfsf[sbindex] > xminForShort[window][sbindex]) {
+                        sfbsOverXmin.push(sbindex);
+                        xminForShort[window][sbindex] *= (ifqstep * ifqstep);
+                        ShortBlockScalefactors[window][sbindex]++;
+                        let sfbPartition = ScaleFactorBands[SAMPLE_RATE][SHORT_BLOCK][sbindex];
+                        for(let i = sfbPartition[0]; i <= sfbPartition[1]; i++) {
+                            Spectrum[window][i] *= ifqstep;
+                        }
+                    }
+                }
+                console.log(`  短块[${window}]超限SFB有：${sfbsOverXmin}`);
+
+                // 【保存尺度因子】
+
+                // （直接保存在ShortBlockScalefactors）
+
+                // 【检查退出条件】
+
+                // 1 所有的尺度因子频带都被放大过？如果是，则退出
+                let isAllSfbAmplified = true;
+                for(let sb = 0; sb < LongBlockSFBNumber; sb++) {
+                    if(ShortBlockScalefactors[window][sb] === 0) { isAllSfbAmplified = false; break; }
+                }
+                if(isAllSfbAmplified === true) {
+                    isFinished[window] = true;
+                    continue;
+                }
+
+                // 2 尺度因子的值是否有超过其各自的动态范围？如果有超过，则退出
+                let isScalefactorExceeded = false;
+                for(let sb = 0; sb <= 10; sb++) {
+                    if(ShortBlockScalefactors[window][sb] > 15) { isScalefactorExceeded = true; break; }
+                }
+                for(let sb = 11; sb <= 20; sb++) {
+                    if(ShortBlockScalefactors[window][sb] > 7) { isScalefactorExceeded = true; break; }
+                }
+                if(isScalefactorExceeded === true) {
+                    isFinished[window] = true;
+                    continue;
+                }
+
+                // 3 还有超限的尺度因子频带吗？如果没有，则退出
+                if(sfbsOverXmin.length <= 0) {
+                    isFinished[window] = true;
+                    continue;
+                }
+            } // 子块循环结束
+
+            // 所有子块都处理完毕
+            if(isFinished[0] === true && isFinished[1] === true && isFinished[2] === true) {
+                return {
+                    BlockType: SHORT_BLOCK,
+                    Scalefactors: ShortBlockScalefactors,
+                    ScalefactorScale: ScalefactorScale,
+                    QuantizationResult: quantizationResult
+                };
+            }
+
+        } // 短块分支结束
 
         outerLoopCount++;
-    }
+
+    } // 一个Granule的噪声控制循环结束
 }
