@@ -29,7 +29,7 @@ var Complex = /** @class */ (function () {
         this.imp = c.imp;
     };
     Complex.prototype.show = function () {
-        console.log('Complex:[ ' + this.rep + ' , ' + this.imp + ' ]');
+        LOG('Complex:[ ' + this.rep + ' , ' + this.imp + ' ]');
     };
     Complex.prototype.absSqr = function() {
         return (this.rep * this.rep + this.imp * this.imp);

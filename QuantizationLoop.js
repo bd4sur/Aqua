@@ -7,12 +7,12 @@ const ROOT_2_4 = 1.189207115002721;
 /**
  * @description 频谱平坦度，用于计算量化步长初值
  */
-function SFM(xr) {
+function SFM(xr576) {
     let temp1 = 0, temp2 = 0;
     let xrlen = 0;
-    for(let i = 0; i < xr.length; i++) {
-        if(xr[i] === 0) continue;
-        let sqr = xr[i] * xr[i];
+    for(let i = 0; i < xr576.length; i++) {
+        if(xr576[i] === 0) continue;
+        let sqr = xr576[i] * xr576[i];
         temp1 += Math.log(sqr);
         temp2 += sqr;
         xrlen++;
@@ -27,7 +27,7 @@ function SFM(xr) {
 /**
  * @description 计算各个尺度因子频带的量化误差
  */
-function CalculateQuantDistortion(xr, ix, quantStep, blockType) {
+function CalculateQuantNoise(xr, ix, quantStep, blockType) {
     let xfsf = new Array();
     let SFB = ScaleFactorBands[SAMPLE_RATE][blockType];
     for(let sbindex = 0; sbindex < SFB.length; sbindex++) {
@@ -42,11 +42,18 @@ function CalculateQuantDistortion(xr, ix, quantStep, blockType) {
 }
 
 /**
- * @description 量化
+ * @description 对576点序列执行量化
+ * @note TODO 根据dist10，此处应该区分长短块，加上subblock_gain，目前暂不实现
  */
-function Quantize(xr, quantStep) {
-    return (xr === 0) ? 0 : (Math.round(Math.pow((Math.abs(xr) / Math.pow(ROOT_2_4, quantStep)), 0.75) - 0.0946));
+function Quantize(xr576, quantStep) {
+    let ix576 = new Array();
+    for(let i = 0; i < 576; i++) {
+        let xr = xr576[i];
+        ix576[i] = Math.sign(xr) * ((xr === 0) ? 0 : (Math.round(Math.pow((Math.abs(xr) / Math.pow(ROOT_2_4, quantStep)), 0.75) - 0.0946)));
+    }
+    return ix576;
 }
+
 
 /**
  * @description 计算序列中最后一个非零值的下标，用于确定零值区的起始点。如果序列全为0，则返回-1。
@@ -352,7 +359,7 @@ function HuffmanEncode(qspectrum576, blockType) {
 /**
  * @description 短块频谱重排
  */
-function ReorderShortBlockSpectrum(qspects) {
+function MuxShortBlockSpectrum(qspects) {
     let qspect576 = new Array();
     let SFBands = ScaleFactorBands[SAMPLE_RATE][SHORT_BLOCK];
     for(let sfb = 0; sfb < SFBands.length; sfb++) {
@@ -373,12 +380,12 @@ function ReorderShortBlockSpectrum(qspects) {
 //     qspects[1][i] = i + 10000;
 //     qspects[2][i] = i + 20000;
 // }
-// console.log(ReorderShortBlockSpectrum(qspects));
+// LOG(MuxShortBlockSpectrum(qspects));
 
 /**
  * @description 576点短块频谱拆分成3个短块频谱
  */
-function ReconstructShortBlockSpectrum(spect576) {
+function DemuxShortBlockSpectrum(spect576) {
     let spect = new Array();
         spect[0] = new Array();
         spect[1] = new Array();
@@ -411,31 +418,18 @@ function InnerLoop(Spectrum, windowType, bitRateLimit) {
         // 长块
         if(windowType !== WINDOW_SHORT) {
             // 量化
-            let LongBlockSpectrum = Spectrum[0];
-            let QuantizedLongBlockSpectrum = new Array();
-            quantanf = Math.round(8 * Math.log(SFM(LongBlockSpectrum)));
-            for(let i = 0; i < LongBlockSpectrum.length; i++) {
-                let xr = LongBlockSpectrum[i];
-                QuantizedLongBlockSpectrum[i] = Math.sign(xr) * Quantize(xr, quantanf + qquant);
-            }
-            quantizedSpectrum576 = QuantizedLongBlockSpectrum;
-
+            let LongBlockSpectrum576 = Spectrum[0];
+            quantanf = Math.round(8 * Math.log(SFM(LongBlockSpectrum576)));
+            quantizedSpectrum576 = Quantize(LongBlockSpectrum576, (quantanf + qquant));
             globalGain = quantanf + qquant + 210;
         }
         // 短块
         else {
             // 将短块频谱重排成连续的576点频谱，并对其量化
             // NOTE 参考dist10，所有子块是同时量化的
-            let ShortBlockSpectrum576 = ReorderShortBlockSpectrum(Spectrum);
-            quantizedSpectrum576 = new Array();
-
+            let ShortBlockSpectrum576 = MuxShortBlockSpectrum(Spectrum);
             quantanf = Math.round(8 * Math.log(SFM(ShortBlockSpectrum576)));
-            for(let i = 0; i < ShortBlockSpectrum576.length; i++) {
-                let xr = ShortBlockSpectrum576[i];
-                quantizedSpectrum576[i] = Math.sign(xr) * Quantize(xr, quantanf + qquant);
-                // TODO 根据dist10，此处应该加上subblock_gain，目前暂不实现
-            }
-
+            quantizedSpectrum576 = Quantize(ShortBlockSpectrum576, (quantanf + qquant));
             globalGain = quantanf + qquant + 210;
         }
 
@@ -511,7 +505,7 @@ function OuterLoop(
     isFinished[0] = false; isFinished[1] = false; isFinished[2] = false;
 
     while(outerLoopCount < 100) { // 超时控制
-        console.log(`外层循环第 ${outerLoopCount} 次`);
+        LOG(`  外层循环第 ${outerLoopCount} 次`);
 
         // 缩放系数
 
@@ -520,12 +514,9 @@ function OuterLoop(
 
         // 【内层循环：码率控制循环】
 
-        console.log(`  === 内层循环开始 ===`);
+        // LOG(`    内层循环开始`);
         quantizationResult = InnerLoop(Spectrum, windowType, bitRateLimit);
-        console.log(`  量化步数qquant：${quantizationResult.qquant}`);
-        console.log(`  Huffman码长：${quantizationResult.huffman.CodeString.length}`);
-        // console.log(quantizationResult.huffman);
-        console.log(`  === 内层循环结束 ===`);
+        LOG(`    内层循环结束，量化步数：${quantizationResult.qquant}`);
 
         /////////////////////////////
         //  长 块
@@ -534,7 +525,7 @@ function OuterLoop(
 
             // 【计算量化噪声】
 
-            let xfsf = CalculateQuantDistortion(Spectrum[0], quantizationResult.quantizedSpectrum576, quantizationResult.globalGain - 210, LONG_BLOCK);
+            let xfsf = CalculateQuantNoise(Spectrum[0], quantizationResult.quantizedSpectrum576, quantizationResult.globalGain - 210, LONG_BLOCK);
 
             // 【预加重】（暂缓实现）
 
@@ -553,7 +544,7 @@ function OuterLoop(
                     }
                 }
             }
-            console.log(`  长块超限SFB有：${sfbsOverXmin}`);
+            LOG(`    已放大长块超限SFB：${sfbsOverXmin}`);
 
             // 【保存尺度因子】
 
@@ -592,13 +583,13 @@ function OuterLoop(
         /////////////////////////////
         else {
             // 首先将量化后的576点频谱分解为3个192点（量化后的）频谱
-            let ShortBlockSpectrums = ReconstructShortBlockSpectrum(quantizationResult.quantizedSpectrum576);
+            let ShortBlockSpectrums = DemuxShortBlockSpectrum(quantizationResult.quantizedSpectrum576);
 
             // 分别处理每个子块的尺度因子
             for(let window = 0; window < 3; window++) {
                 // 跳过已经完成的子块
                 if(isFinished[window] === true) {
-                    console.log(`  短块[${window}]已处理完毕，跳过。`);
+                    LOG(`    短块[${window}]已处理完毕，跳过。`);
                     continue;
                 }
 
@@ -606,7 +597,7 @@ function OuterLoop(
 
                 // 【计算量化噪声】
 
-                let xfsf = CalculateQuantDistortion(Spectrum[window], quantizedShortSpectrum, quantizationResult.globalGain - 210, SHORT_BLOCK);
+                let xfsf = CalculateQuantNoise(Spectrum[window], quantizedShortSpectrum, quantizationResult.globalGain - 210, SHORT_BLOCK);
 
                 // 【预加重】（暂缓实现）
 
@@ -625,7 +616,7 @@ function OuterLoop(
                         }
                     }
                 }
-                console.log(`  短块[${window}]超限SFB有：${sfbsOverXmin}`);
+                LOG(`    已放大短块[${window}]超限SFB：${sfbsOverXmin}`);
 
                 // 【保存尺度因子】
 

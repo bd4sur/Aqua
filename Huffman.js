@@ -436,7 +436,7 @@ for(let i = 0; i < lines.length; i++) {
     let newline = `"${fields[0]} ${fields[1]}": "${fields[3]}",${crlf}`;
     buffer.push(newline);
 }
-console.log(buffer.join(""));
+LOG(buffer.join(""));
  */
 
 
@@ -547,4 +547,4 @@ function DecodePrefix(str, htree) {
 
 // let htrees = HuffmanTreeInit();
 // let res = DecodePrefix("00010000000000000000", htrees.HuffmanTreeDuple[15]);
-// console.log(res);
+// LOG(res);

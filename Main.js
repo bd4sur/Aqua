@@ -107,21 +107,36 @@ function MPEG(PCMData) {
         // 心理声学模型（待实现）
         let isAttack = (Math.random() > 0.5) ? true : false;
         currentWindowType = SwitchWindowType(prevWindowType, isAttack);
-        console.log(`[Granule_${GranuleCount}] 窗口类型：${currentWindowType}`);
+        LOG(`[Granule_${GranuleCount}] 窗口类型：${currentWindowType}`);
         let xmin = new Array();
         for(let i = 0; i < 21; i++) { // 应当区分长短块
-            xmin[i] = 1e-7;
+            xmin[i] = 1e-6;
         }
 
         // 时频变换：可能是长块，可能是短块，由currentWindowType决定。
         let Spectrum = CalculateGranuleSpectrum(currentGranuleSubbands, prevGranuleSubbands, currentWindowType);
-        // console.log(`[Granule_${GranuleCount}] 频谱：`);
-        // console.log(Spectrum);
+        // LOG(`[Granule_${GranuleCount}] 频谱：`);
+        // LOG(Spectrum);
 
-        console.log(`[Granule_${GranuleCount}] 量化循环开始`);
-        let sf = OuterLoop(Spectrum, currentWindowType, 3000, xmin);
-        console.log(`[Granule_${GranuleCount}] 尺度因子结果：`);
-        console.log(sf);
+        // 平均每个Granule的长度
+        let MeanBitsPerGranule = Math.round(BIT_RATES[BIT_RATE] * 576 / SAMPLE_RATES[SAMPLE_RATE]);
+
+        LOG(`[Granule_${GranuleCount}] 平均每个Granule的比特数 = ${MeanBitsPerGranule}`);
+        LOG(`[Granule_${GranuleCount}] 外层循环开始`);
+        let sf = OuterLoop(Spectrum, currentWindowType, MeanBitsPerGranule, xmin);
+        LOG(`[Granule_${GranuleCount}] 外层循环结束：`);
+        LOG(`    ★ 哈夫曼码长：${sf.QuantizationResult.huffman.CodeString.length}`);
+        LOG(`    ★ GlobalGain：${sf.QuantizationResult.globalGain}`);
+        LOG(`    ★ 量化步数：${sf.QuantizationResult.qquant}`);
+        if(currentWindowType === WINDOW_SHORT) {
+            LOG(`    ★ 尺度因子(短块0)：${sf.Scalefactors[0]}`);
+            LOG(`    ★ 尺度因子(短块1)：${sf.Scalefactors[1]}`);
+            LOG(`    ★ 尺度因子(短块2)：${sf.Scalefactors[2]}`);
+        }
+        else {
+            LOG(`    ★ 尺度因子：${sf.Scalefactors}`);
+        }
+        
 
 
         // 反量化
@@ -135,7 +150,7 @@ function MPEG(PCMData) {
         }
         */
 
-        console.log(`=============================================================`);
+        LOG(`=============================================================`);
 
         prevGranuleSubbands = currentGranuleSubbands;
         prevWindowType = currentWindowType;

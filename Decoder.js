@@ -49,7 +49,7 @@ function HuffmanDecode(
         let htree = HUFFMAN_TREES_DUPLE[bigvalueTableSelects[region]];
         let linbits = HuffmanTableDuple[bigvalueTableSelects[region]].linbits;
 
-        // console.log(`Region ${region}: Length = ${count} Linbits = ${linbits}`);
+        // LOG(`Region ${region}: Length = ${count} Linbits = ${linbits}`);
 
         while(count > 0) {
             let hresult = DecodePrefix(bitstr.substring(offset), htree);
@@ -79,7 +79,7 @@ function HuffmanDecode(
 
             count -= 2;
 
-            // console.log(`Decoded: ${x} ${y}`);
+            // LOG(`Decoded: ${x} ${y}`);
         }
     }
 

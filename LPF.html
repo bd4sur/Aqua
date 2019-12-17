@@ -161,14 +161,14 @@ function Render(rawAudioData, cutoffFreq) {
         const windowSize = 1024;
         cutoffRatio = cutoffFreq / SampleRate * 2;
 
-        console.log("LPF Start");
+        LOG("LPF Start");
         console.time("LPF Left");
         filteredLeft  = LPF(leftChannel, windowSize, cutoffRatio);
         console.timeEnd("LPF Left");
         console.time("LPF Right");
         filteredRight = LPF(rightChannel, windowSize, cutoffRatio);
         console.timeEnd("LPF Right");
-        console.log("LPF End");
+        LOG("LPF End");
 
         $("#Playing").hide();
 

@@ -5,12 +5,12 @@ const GRANULE_LENGTH = 576;
 const GRANULES_PER_FRAME = 2;
 const FRAME_LENGTH = 1152;
 
-const BIT_RATES = [64, 128, 224, 320]; // 作为原理验证，仅支持4种码率
+const BIT_RATES = [64000, 128000, 224000, 320000]; // 作为原理验证，仅支持4种码率
 
-const BIT_RATE_64  = 0;
-const BIT_RATE_128 = 1;
-const BIT_RATE_224 = 2;
-const BIT_RATE_320 = 3;
+const BIT_RATE_64K  = 0;
+const BIT_RATE_128K = 1;
+const BIT_RATE_224K = 2;
+const BIT_RATE_320K = 3;
 
 const SAMPLE_RATES = [32000, 44100, 48000];
 

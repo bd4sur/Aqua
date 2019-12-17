@@ -1,3 +1,15 @@
+/**
+ * @description 在网页上输出
+ */
+function LOG(x) {
+    console.log(x);
+    if(typeof x === "object") {
+        x = JSON.stringify(x);
+    }
+    let html = $("#output").html();
+    $("#output").html(html + x + `<br>`);
+}
+
 // 复数类
 class Complex {
     constructor(rep, imp) {
@@ -36,7 +48,7 @@ class Complex {
         return (angle >= 0) ? angle : (2 * Math.PI + angle);
     }
     show() {
-        console.log('Complex:[ ' + this.rep + ' , ' + this.imp + ' ]');
+        LOG('Complex:[ ' + this.rep + ' , ' + this.imp + ' ]');
     }
 }
 

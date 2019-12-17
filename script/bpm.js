@@ -87,8 +87,8 @@ function BPMAnalyseByFT(PCM, FRAME_NUMBER, FRAME_LENGTH) {
     let maxBPM = 60 * PCM.SampleRate / FRAME_LENGTH / 2;
 
     let BPMs = new Object();
-    console.log(`节拍帧宽度：${FRAME_LENGTH}采样（${(FRAME_LENGTH / PCM.SampleRate * 1000).toFixed(2)}ms）`);
-    console.log(`窗长度：${FRAME_NUMBER}个节拍帧（${(FRAME_NUMBER * (FRAME_LENGTH / PCM.SampleRate)).toFixed(2)}s）`);
+    LOG(`节拍帧宽度：${FRAME_LENGTH}采样（${(FRAME_LENGTH / PCM.SampleRate * 1000).toFixed(2)}ms）`);
+    LOG(`窗长度：${FRAME_NUMBER}个节拍帧（${(FRAME_NUMBER * (FRAME_LENGTH / PCM.SampleRate)).toFixed(2)}s）`);
 
     for(let POSITION = 0.0; POSITION <= 1.0; POSITION += 0.1) {
         // 取能量序列的一个窗口
@@ -121,7 +121,7 @@ function BPMAnalyseByFT(PCM, FRAME_NUMBER, FRAME_LENGTH) {
         BPMs[POSITION.toFixed(2)] = normalize(BPM);
 
         let windowStartTime = (startFrom * FRAME_LENGTH / PCM.SampleRate).toFixed(2);
-        console.log(`BPM @ ${POSITION.toFixed(2)} (from ${windowStartTime}s) = ${normalize(BPM)}`);
+        LOG(`BPM @ ${POSITION.toFixed(2)} (from ${windowStartTime}s) = ${normalize(BPM)}`);
     }
 
     // 根据速度谱，估计总体BPM
@@ -160,7 +160,7 @@ function BPM(PCM, callback) {
     const FRAME_NUMBER = 2048; // 帧的数量（44100Hz，帧宽1024点的情况下，1024帧持续时间约23.8s）
     const FRAME_LENGTH = 2048;
     let BpmResult = BPMAnalyseByFT(PCM, FRAME_NUMBER, FRAME_LENGTH);
-    console.log(BpmResult);
+    LOG(BpmResult);
     callback();
 }
 
