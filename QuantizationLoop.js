@@ -406,6 +406,52 @@ function DemuxShortBlockSpectrum(spect576) {
     return spect;
 }
 
+
+/**
+ * @description 计算尺度因子的scalefac_compress  TODO 不支持混合块模式
+ * @reference 2.4.2.7(p25-26)
+ * @input  Scalefactors - 一组尺度因子（21个（长块）或者12个（短块））
+ * @input  blockType - 窗口类型（长块或短块）
+ * @output scalefac_compress
+ */
+function CalculateScalefactorCompress(Scalefactors, blockType) {
+    const SFCompress = [
+    // slen2= 0   1   2   3
+            [ 0,  1,  2,  3], // slen1 = 0
+            [-1,  5,  6,  7], // slen1 = 1
+            [-1,  8,  9, 10], // slen1 = 2
+            [ 4, 11, 12, 13], // slen1 = 3
+            [-1, -1, 14, 15], // slen1 = 4
+    ];
+    let maxValue1 = -1;
+    let maxValue2 = -1;
+    if(blockType === LONG_BLOCK) {
+        // 计算0~10和11~20两个SFB区间的最大值
+        for(let i = 0; i <= 10; i++) {
+            if(Scalefactors[i] > maxValue1) maxValue1 = Scalefactors[i];
+        }
+        for(let i = 11; i <= 20; i++) {
+            if(Scalefactors[i] > maxValue2) maxValue2 = Scalefactors[i];
+        }
+    }
+    else if(blockType === SHORT_BLOCK) {
+        // 计算0~5和6~11两个SFB区间的最大值
+        for(let i = 0; i <= 5; i++) {
+            if(Scalefactors[i] > maxValue1) maxValue1 = Scalefactors[i];
+        }
+        for(let i = 6; i <= 11; i++) {
+            if(Scalefactors[i] > maxValue2) maxValue2 = Scalefactors[i];
+        }
+    }
+    // 计算各自的位数
+    let slen1 = Math.floor(Math.log2(maxValue1)) + 1;
+    let slen2 = Math.floor(Math.log2(maxValue2)) + 1;
+    let sfcompress = SFCompress[slen1][slen2];
+    if(!(sfcompress >= 0)) sfcompress = 15;
+    return (!(sfcompress >= 0)) ? 15 : sfcompress;
+}
+
+
 /**
  * @description 内层循环（码率控制循环）
  */

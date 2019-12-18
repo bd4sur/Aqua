@@ -106,6 +106,7 @@ function MPEG(PCMData) {
 
         // 心理声学模型（待实现）
         let isAttack = (Math.random() > 0.5) ? true : false;
+        let perceptualEntropy = 1000;
         currentWindowType = SwitchWindowType(prevWindowType, isAttack);
         LOG(`[Granule_${GranuleCount}] 窗口类型：${currentWindowType}`);
         let xmin = new Array();
@@ -115,15 +116,15 @@ function MPEG(PCMData) {
 
         // 时频变换：可能是长块，可能是短块，由currentWindowType决定。
         let Spectrum = CalculateGranuleSpectrum(currentGranuleSubbands, prevGranuleSubbands, currentWindowType);
-        // LOG(`[Granule_${GranuleCount}] 频谱：`);
-        // LOG(Spectrum);
 
-        // 平均每个Granule的长度
-        let MeanBitsPerGranule = Math.round(BIT_RATES[BIT_RATE] * 576 / SAMPLE_RATES[SAMPLE_RATE]);
+        // 由比特率计算的平均每个Granule的长度
+        let meanBitsPerGranule = Math.round(BIT_RATES[BIT_RATE] * 576 / SAMPLE_RATES[SAMPLE_RATE]);
+        // 考虑比特池机制后计算得到的平均每Granule最大比特数
+        let maxBitsPerGranule = ReservoirMaxBits(perceptualEntropy, meanBitsPerGranule);
 
-        LOG(`[Granule_${GranuleCount}] 平均每个Granule的比特数 = ${MeanBitsPerGranule}`);
+        LOG(`[Granule_${GranuleCount}] 平均每个Granule的比特数 = ${maxBitsPerGranule}`);
         LOG(`[Granule_${GranuleCount}] 外层循环开始`);
-        let sf = OuterLoop(Spectrum, currentWindowType, MeanBitsPerGranule, xmin);
+        let sf = OuterLoop(Spectrum, currentWindowType, maxBitsPerGranule, xmin);
         LOG(`[Granule_${GranuleCount}] 外层循环结束：`);
         LOG(`    ★ 哈夫曼码长：${sf.QuantizationResult.huffman.CodeString.length}`);
         LOG(`    ★ GlobalGain：${sf.QuantizationResult.globalGain}`);
