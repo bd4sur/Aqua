@@ -123,21 +123,72 @@ function MPEG(PCMData) {
         let maxBitsPerGranule = ReservoirMaxBits(perceptualEntropy, meanBitsPerGranule);
 
         LOG(`[Granule_${GranuleCount}] 平均每个Granule的比特数 = ${maxBitsPerGranule}`);
-        LOG(`[Granule_${GranuleCount}] 外层循环开始`);
-        let sf = OuterLoop(Spectrum, currentWindowType, maxBitsPerGranule, xmin);
-        LOG(`[Granule_${GranuleCount}] 外层循环结束：`);
-        LOG(`    ★ 哈夫曼码长：${sf.QuantizationResult.huffman.CodeString.length}`);
-        LOG(`    ★ GlobalGain：${sf.QuantizationResult.globalGain}`);
-        LOG(`    ★ 量化步数：${sf.QuantizationResult.qquant}`);
-        if(currentWindowType === WINDOW_SHORT) {
-            LOG(`    ★ 尺度因子(短块0)：${sf.Scalefactors[0]}`);
-            LOG(`    ★ 尺度因子(短块1)：${sf.Scalefactors[1]}`);
-            LOG(`    ★ 尺度因子(短块2)：${sf.Scalefactors[2]}`);
+        // LOG(`[Granule_${GranuleCount}] 外层循环开始`);
+        let outerLoopOutput = OuterLoop(Spectrum, currentWindowType, maxBitsPerGranule, xmin);
+        // LOG(`[Granule_${GranuleCount}] 外层循环结束：`);
+
+        // 计算尺度因子长度
+        let part2Length = 0;
+        let scalefactorCompress = 15;
+        if(currentWindowType !== WINDOW_SHORT) {
+            scalefactorCompress = CalculateScalefactorCompress(outerLoopOutput.scalefactors, currentWindowType);
+            let slens = SF_COMPRESS_INDEX[scalefactorCompress];
+            part2Length = 11 * slens[0] + 10 * slens[1];
+        }
+        else if(currentWindowType === WINDOW_SHORT) {
+            let scalefactorCompress_0 = CalculateScalefactorCompress(outerLoopOutput.scalefactors[0], currentWindowType);
+            let scalefactorCompress_1 = CalculateScalefactorCompress(outerLoopOutput.scalefactors[1], currentWindowType);
+            let scalefactorCompress_2 = CalculateScalefactorCompress(outerLoopOutput.scalefactors[2], currentWindowType);
+            // TODO 不能简单地通过比较序号大小来选择长度最大的序号，此处待改进
+            scalefactorCompress = Math.max(scalefactorCompress_0, scalefactorCompress_1, scalefactorCompress_2);
+            let slens = SF_COMPRESS_INDEX[scalefactorCompress];
+            part2Length = (6 * slens[0] + 6 * slens[1]) * 3;
+        }
+
+        ////////////////////////
+        // 构建Granule
+        ////////////////////////
+
+        let granule = new Granule(currentWindowType);
+
+        // Part 1
+        granule.scfsi = [0,0,0,0];
+        granule.part23Length = part2Length + outerLoopOutput.huffman.codeString.length;
+        granule.bigvalues = outerLoopOutput.huffman.bigvalues;
+        granule.globalGain = outerLoopOutput.globalGain;
+        granule.scalefactorCompress = scalefactorCompress;
+
+        if(granule.windowSwitchingFlag === 1) {
+            granule.tableSelect = outerLoopOutput.huffman.bigvalueTableSelect;
+            granule.subblockGain = outerLoopOutput.subblockGain;
         }
         else {
-            LOG(`    ★ 尺度因子：${sf.Scalefactors}`);
+            granule.tableSelect = outerLoopOutput.huffman.bigvalueTableSelect;
+            granule.region0Count = outerLoopOutput.huffman.region0Count;
+            granule.region1Count = outerLoopOutput.huffman.region1Count;
         }
-        
+        granule.count1TableSelect = outerLoopOutput.huffman.smallvalueTableSelect;
+
+        // Part 2
+        granule.scalefactors = outerLoopOutput.scalefactors;
+
+        // Part 3
+        granule.huffman = outerLoopOutput.huffman.codeString;
+
+
+
+        LOG(`    ★ Part23Length：${granule.part23Length}`);
+        LOG(`    ★ GlobalGain：${granule.globalGain}`);
+        LOG(`    ★ 量化步数：${outerLoopOutput.qquant}`);
+        if(currentWindowType === WINDOW_SHORT) {
+            LOG(`    ★ 尺度因子(短块0)：${granule.scalefactors[0]}`);
+            LOG(`    ★ 尺度因子(短块1)：${granule.scalefactors[1]}`);
+            LOG(`    ★ 尺度因子(短块2)：${granule.scalefactors[2]}`);
+        }
+        else {
+            LOG(`    ★ 尺度因子：${granule.scalefactors}`);
+        }
+        LOG(granule);
 
 
         // 反量化

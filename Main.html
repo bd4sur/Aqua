@@ -20,19 +20,19 @@
         <div style="text-align: left; line-height: 23px; color:#666;">
             ⭐ 打开控制台以查看输出信息
         </div>
-        <div style="display: none;">
-            <div style="text-align: left; margin: 10px 0; padding: 10px; border-radius: 5px; background: #e1f5ff; font-weight: bold;">
-                打开音频文件（WAV、MP3等均可）：<input type="file" id="fileSelector" name="files[]" multiple>
-            </div>
 
-            <div style="margin: 10px 0;">
-                <button id="play" data-state="stopped"><span id="playLabel">播放</span><svg id="ThrobberPlaying" version="1" xmlns="http://www.w3.org/2000/svg" width="16" height="16" style="transform: scale(1); display: none; position: relative; top: 3px; left: 3px;"><style>@keyframes rotate{0%{transform:rotate(0deg)}to{transform:rotate(360deg)}}@keyframes fillunfill{0%{stroke-dashoffset:32.3}50%{stroke-dashoffset:0}to{stroke-dashoffset:-31.9}}@keyframes rot{0%{transform:rotate(0deg)}to{transform:rotate(-360deg)}}@keyframes colors{0%,to{stroke:#00aaff}}</style><g style="animation-duration:1568.63ms;animation-iteration-count:infinite;animation-name:rotate;animation-timing-function:linear;transform-origin:50% 50%;width:16px;height:16px"><path fill="none" d="M8 1.125A6.875 6.875 0 1 1 1.125 8" stroke-width="2.25" stroke-linecap="round" style="animation-duration:1333ms,5332ms,5332ms;animation-fill-mode:forwards;animation-iteration-count:infinite,infinite,infinite;animation-name:fillunfill,rot,colors;animation-play-state:running,running,running;animation-timing-function:cubic-bezier(.4,0,.2,1),steps(4),linear;transform-origin:50% 50%" stroke-dasharray="32.4" stroke-dashoffset="32.4"></path></g></svg></button>
-            </div>
-            <div class="ProcessbarContainer">
-                <div id="progressbar" style="height: 100%; background-color: #00aaff; width: 5px;"></div>
-                <div id="timer" style="position: absolute; top: 0; left: 0; font-size: 14px; height: 15px; line-height: 15px; margin: 5px 10px;"></div>
-            </div>
+        <div style="text-align: left; margin: 10px 0; padding: 10px; border-radius: 5px; background: #e1f5ff; font-weight: bold;">
+            打开音频文件（WAV、MP3等均可）：<input type="file" id="fileSelector" name="files[]" multiple>
         </div>
+
+        <div style="margin: 10px 0;">
+            <button id="play" data-state="stopped"><span id="playLabel">播放</span><svg id="ThrobberPlaying" version="1" xmlns="http://www.w3.org/2000/svg" width="16" height="16" style="transform: scale(1); display: none; position: relative; top: 3px; left: 3px;"><style>@keyframes rotate{0%{transform:rotate(0deg)}to{transform:rotate(360deg)}}@keyframes fillunfill{0%{stroke-dashoffset:32.3}50%{stroke-dashoffset:0}to{stroke-dashoffset:-31.9}}@keyframes rot{0%{transform:rotate(0deg)}to{transform:rotate(-360deg)}}@keyframes colors{0%,to{stroke:#00aaff}}</style><g style="animation-duration:1568.63ms;animation-iteration-count:infinite;animation-name:rotate;animation-timing-function:linear;transform-origin:50% 50%;width:16px;height:16px"><path fill="none" d="M8 1.125A6.875 6.875 0 1 1 1.125 8" stroke-width="2.25" stroke-linecap="round" style="animation-duration:1333ms,5332ms,5332ms;animation-fill-mode:forwards;animation-iteration-count:infinite,infinite,infinite;animation-name:fillunfill,rot,colors;animation-play-state:running,running,running;animation-timing-function:cubic-bezier(.4,0,.2,1),steps(4),linear;transform-origin:50% 50%" stroke-dasharray="32.4" stroke-dashoffset="32.4"></path></g></svg></button>
+        </div>
+        <div class="ProcessbarContainer">
+            <div id="progressbar" style="height: 100%; background-color: #00aaff; width: 5px;"></div>
+            <div id="timer" style="position: absolute; top: 0; left: 0; font-size: 14px; height: 15px; line-height: 15px; margin: 5px 10px;"></div>
+        </div>
+
         <pre id="output" style="text-align: left; background-color: black; color:#eee; padding: 10px; border-radius: 10px; overflow-x: auto;"></pre>
 
         <!-- <canvas id="osc0"  height="100px" width="300px"></canvas></td><td><canvas id="osc1"  height="100px" width="300px"></canvas> -->
@@ -61,6 +61,7 @@
 <script src="MDCT.js"></script>
 <script src="Reservoir.js"></script>
 <script src="QuantizationLoop.js"></script>
+<script src="Stream.js"></script>
 
 <script src="Decoder.js"></script>
 
@@ -73,18 +74,18 @@ let spect = [108,106,102,96,89,79,69,56,41,25,5,-16,-25,-29,-27,-18,5,19,-37,-39
 LOG(`===== 编码前 =====`);
 LOG(spect);
 
-let huffman = HuffmanEncode(spect, SHORT_BLOCK);
+let huffman = HuffmanEncode(spect, WINDOW_NORMAL);
 LOG(`===== 编码结果 =====`);
 LOG(huffman);
 
 let spectDecoded = HuffmanDecode(
-    huffman.CodeString,
-    huffman.BlockType,
-    huffman.Bigvalues,
-    huffman.Region0Count,
-    huffman.Region1Count,
-    huffman.BigvalueTableSelect,
-    huffman.SmallvalueTableSelect
+    huffman.codeString,
+    huffman.blockType,
+    huffman.bigvalues,
+    huffman.region0Count,
+    huffman.region1Count,
+    huffman.bigvalueTableSelect,
+    huffman.smallvalueTableSelect
 );
 LOG(`===== 解码后 =====`);
 LOG(spectDecoded);
