@@ -99,6 +99,16 @@ function MPEG(PCMData) {
         }
     }
 
+    // 帧间距（bits）
+    let frameLength = Math.round(BIT_RATES[BIT_RATE] * 1152 / SAMPLE_RATES[SAMPLE_RATE]);
+    LOG(`帧间距：${frameLength} bits`);
+    // 每个Granule的平均长度（含所有声道，bits）
+    let meanBitsPerGranule = (frameLength - 256) / 2;
+    LOG(`Granule平均长度：${meanBitsPerGranule} bits`);
+    // 设置比特储备的最大容量
+    SetReservoirMax(frameLength);
+    LOG(`最大比特储备：${RESERVOIR_MAX} bits`);
+
     for(let GranuleOffset = 0; GranuleOffset < PCMData.length; GranuleOffset += GRANULE_LENGTH) {
 
         // 分析子带滤波
@@ -106,7 +116,7 @@ function MPEG(PCMData) {
 
         // 心理声学模型（待实现）
         let isAttack = (Math.random() > 0.5) ? true : false;
-        let perceptualEntropy = 1000;
+        let perceptualEntropy = 470;
         currentWindowType = SwitchWindowType(prevWindowType, isAttack);
         LOG(`[Granule_${GranuleCount}] 窗口类型：${currentWindowType}`);
         let xmin = new Array();
@@ -117,14 +127,18 @@ function MPEG(PCMData) {
         // 时频变换：可能是长块，可能是短块，由currentWindowType决定。
         let Spectrum = CalculateGranuleSpectrum(currentGranuleSubbands, prevGranuleSubbands, currentWindowType);
 
-        // 由比特率计算的平均每个Granule的长度
-        let meanBitsPerGranule = Math.round(BIT_RATES[BIT_RATE] * 576 / SAMPLE_RATES[SAMPLE_RATE]);
-        // 考虑比特池机制后计算得到的平均每Granule最大比特数
-        let maxBitsPerGranule = ReservoirMaxBits(perceptualEntropy, meanBitsPerGranule);
+        // TODO 判断是否是全0的频谱
 
-        LOG(`[Granule_${GranuleCount}] 平均每个Granule的比特数 = ${maxBitsPerGranule}`);
+        // 考虑比特池机制后计算得到的平均每Granule最大比特数
+        let budget = AllocateGranuleBudget(perceptualEntropy, meanBitsPerGranule);
+
+        LOG(`当前比特储备：${RESERVOIR_SIZE}`);
+
+        LOG(`[Granule_${GranuleCount}] 当前Granule分配的比特预算（part2 & 3） = ${budget} bits`);
+        let huffmanBudget = budget - ((currentWindowType !== WINDOW_SHORT) ? 74 : 126); // 假设尺度因子全满的情况下，扣除尺度因子所使用的比特，剩余的预算分配给part3（哈夫曼编码）
+        LOG(`[Granule_${GranuleCount}] 当前Granule分配的比特预算（only part3）= ${huffmanBudget} bits`);
         // LOG(`[Granule_${GranuleCount}] 外层循环开始`);
-        let outerLoopOutput = OuterLoop(Spectrum, currentWindowType, maxBitsPerGranule, xmin);
+        let outerLoopOutput = OuterLoop(Spectrum, currentWindowType, huffmanBudget, xmin);
         // LOG(`[Granule_${GranuleCount}] 外层循环结束：`);
 
         // 计算尺度因子长度
@@ -190,6 +204,8 @@ function MPEG(PCMData) {
         }
         LOG(granule);
 
+        // 将预算内没用完的比特 回馈给比特储备池
+        AdjustReservoirSize(granule.part23Length, meanBitsPerGranule);
 
         // 反量化
         /*

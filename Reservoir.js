@@ -5,9 +5,9 @@ let RESERVOIR_MAX  = 0;
 let RESERVOIR_SIZE = 0;
 
 /**
- * @description 每帧开始时调用，同dist10的ResvFrameBegin
+ * @description 设置最大比特储备容量（bits），同dist10的ResvFrameBegin
  */
-function ReservoirFrameBegin(meanBitsPerGranule, frameLength) {
+function SetReservoirMax(frameLength) {
     // 根据当前帧长度修改比特储备池最大长度
     if(frameLength > 7680) { // NOTE 7680是320k/48kHz的帧比特数（320000*1152/48000=7680）
         RESERVOIR_MAX = 0;
@@ -22,35 +22,31 @@ function ReservoirFrameBegin(meanBitsPerGranule, frameLength) {
 }
 
 /**
- * @description 计算内层循环的每个Granule的比特数限制
+ * @description 计算量化循环的每个Granule、每个声道的比特预算
+ * ReservoirMaxBits
  */
-function ReservoirMaxBits(perceptualEntropy, meanBitsPerGranule) {
-    let meanBits = meanBitsPerGranule / CHANNELS; // 每个声道的平均比特数
-    let maxBits = (meanBits > 4095) ? 4095 : meanBits;
+function AllocateGranuleBudget(perceptualEntropy, meanBitsPerGranule) {
+    let budget = meanBitsPerGranule / CHANNELS; // 每个声道的平均比特数
 
-    if(RESERVOIR_MAX === 0) return maxBits;
-
-    let moreBits = perceptualEntropy * 3.1 - meanBits;
-    let addBits = 0;
-    if(moreBits > 100) {
-        addBits = (moreBits > 0.6 * RESERVOIR_SIZE) ? (0.6 * RESERVOIR_SIZE) : moreBits;
+    // 如果比特储备为0，则直接以平均比特数为预算（需要限幅）
+    if(RESERVOIR_SIZE === 0) {
+        return (budget > 4095) ? 4095 : budget; // 因为part23Length最大值为4095
     }
 
+    let moreBits = perceptualEntropy * 3.1 - meanBitsPerGranule / CHANNELS;
+    let addBits = (moreBits > 100) ?
+                    Math.min(moreBits, 0.6 * RESERVOIR_SIZE) : // NOTE 这里采用dist10的实现，似乎与11172有出入。11172是取大者，但dist10是取小者。
+                    0;
+    budget += addBits;
     let overBits = RESERVOIR_SIZE - 0.8 * RESERVOIR_MAX - addBits;
-    if(overBits > 0) {
-        addBits += overBits;
-    }
+    budget += ((overBits > 0) ? overBits : 0);
 
-    maxBits += addBits;
-
-    if(maxBits > 4095) maxBits = 4095;
-
-    return maxBits;
+    return (budget > 4095) ? 4095 : Math.round(budget); // 因为part23Length最大值为4095
 }
 
 /**
- * @description 编码一个Granule后，将剩余的比特捐献给比特储备池
+ * @description 编码一个Granule的一个声道后，将剩余的比特捐献给比特储备池
  */
-function ReservoirAdjust(part23Length, meanBitsPerGranule) {
+function AdjustReservoirSize(part23Length, meanBitsPerGranule) {
     RESERVOIR_SIZE += (meanBitsPerGranule / CHANNELS) - part23Length;
 }
