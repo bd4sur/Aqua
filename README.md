@@ -18,6 +18,8 @@ Otonashi是一个MP3编解码器学习研究项目，目标是使用TypeScript�
 
 以下是正式开始实现MP3编解码器之前的一些学习探究工作，侧重可交互、可视化、原理验证。
 
+![编码器框图](./documentation/mp3-encoder-diagram.png)
+
 ![帧结构](./documentation/mp3-frame.png)
 
 - [MDCT所使用的4种窗口及其转换](https://mikukonai.com/MP3-Study/MDCT-windows.html)
