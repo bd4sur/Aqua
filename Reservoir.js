@@ -22,18 +22,18 @@ function SetReservoirMax(frameLength) {
 }
 
 /**
- * @description 计算量化循环的每个Granule、每个声道的比特预算
+ * @description 给每个Channel的分配比特预算
  * ReservoirMaxBits
  */
-function AllocateGranuleBudget(perceptualEntropy, meanBitsPerGranule) {
-    let budget = meanBitsPerGranule / CHANNELS; // 每个声道的平均比特数
+function AllocateBudget(perceptualEntropy, meanBitsPerChannel) {
+    let budget = meanBitsPerChannel;
 
     // 如果比特储备为0，则直接以平均比特数为预算（需要限幅）
     if(RESERVOIR_SIZE === 0) {
         return (budget > 4095) ? 4095 : budget; // 因为part23Length最大值为4095
     }
 
-    let moreBits = perceptualEntropy * 3.1 - meanBitsPerGranule / CHANNELS;
+    let moreBits = perceptualEntropy * 3.1 - meanBitsPerChannel;
     let addBits = (moreBits > 100) ?
                     Math.min(moreBits, 0.6 * RESERVOIR_SIZE) : // NOTE 这里采用dist10的实现，似乎与11172有出入。11172是取大者，但dist10是取小者。
                     0;
@@ -45,8 +45,8 @@ function AllocateGranuleBudget(perceptualEntropy, meanBitsPerGranule) {
 }
 
 /**
- * @description 编码一个Granule的一个声道后，将剩余的比特捐献给比特储备池
+ * @description 编码一个Channel后，将编码后剩余的比特返还给比特储备池
  */
-function AdjustReservoirSize(part23Length, meanBitsPerGranule) {
-    RESERVOIR_SIZE += (meanBitsPerGranule / CHANNELS) - part23Length;
+function AdjustReservoirSize(part23Length, meanBitsPerChannel) {
+    RESERVOIR_SIZE += (meanBitsPerChannel - part23Length);
 }

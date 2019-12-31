@@ -81,131 +81,24 @@ $("#play").click(() => {
     }
 });
 
-MPEG(PCMData);
-
 /**
- * 按照时间顺序，依次处理每个Granule
+ * 编码器的全局缓存（可优化）
  */
+
+let PREV_BLOCK_TYPE = WINDOW_NORMAL;
+let PREV_SUBBANDS = new Array();
+for(let i = 0; i < 32; i++) {
+    PREV_SUBBANDS[i] = new Array();
+    for(let j = 0; j < 18; j++) {
+        PREV_SUBBANDS[i][j] = 0;
+    }
+}
 
 function MPEG(PCMData) {
 
-    let GranuleCount = 0;
-    let prevWindowType = WINDOW_NORMAL, currentWindowType;
-    let prevGranuleSubbands = new Array(), currentGranuleSubbands;
-    for(let i = 0; i < 32; i++) {
-        prevGranuleSubbands[i] = new Array();
-        for(let j = 0; j < 18; j++) {
-            prevGranuleSubbands[i][j] = 0;
-        }
-    }
+    for(let offset = 0; offset < PCMData.length; offset += FRAME_LENGTH) {
 
-    // 帧间距（bits）
-    let frameLength = Math.round(BIT_RATES[BIT_RATE] * 1152 / SAMPLE_RATES[SAMPLE_RATE]);
-    LOG(`帧间距：${frameLength} bits`);
-    // 每个Granule的平均长度（含所有声道，bits）
-    let meanBitsPerGranule = (frameLength - 256) / 2;
-    LOG(`Granule平均长度：${meanBitsPerGranule} bits`);
-    // 设置比特储备的最大容量
-    SetReservoirMax(frameLength);
-    LOG(`最大比特储备：${RESERVOIR_MAX} bits`);
-
-    for(let GranuleOffset = 0; GranuleOffset < PCMData.length; GranuleOffset += GRANULE_LENGTH) {
-
-        // 分析子带滤波
-        currentGranuleSubbands = AnalysisSubbandFilter(PCMData, GranuleOffset);
-
-        // 心理声学模型（待实现）
-        let isAttack = (Math.random() > 0.5) ? true : false;
-        let perceptualEntropy = 470;
-        currentWindowType = SwitchWindowType(prevWindowType, isAttack);
-        LOG(`[Granule_${GranuleCount}] 窗口类型：${currentWindowType}`);
-        let xmin = new Array();
-        for(let i = 0; i < 21; i++) { // 应当区分长短块
-            xmin[i] = 1e-6;
-        }
-
-        // 时频变换：可能是长块，可能是短块，由currentWindowType决定。
-        let Spectrum = CalculateGranuleSpectrum(currentGranuleSubbands, prevGranuleSubbands, currentWindowType);
-
-        // TODO 判断是否是全0的频谱
-
-        // 考虑比特池机制后计算得到的平均每Granule最大比特数
-        let budget = AllocateGranuleBudget(perceptualEntropy, meanBitsPerGranule);
-
-        LOG(`当前比特储备：${RESERVOIR_SIZE}`);
-
-        LOG(`[Granule_${GranuleCount}] 当前Granule分配的比特预算（part2 & 3） = ${budget} bits`);
-        let huffmanBudget = budget - ((currentWindowType !== WINDOW_SHORT) ? 74 : 126); // 假设尺度因子全满的情况下，扣除尺度因子所使用的比特，剩余的预算分配给part3（哈夫曼编码）
-        LOG(`[Granule_${GranuleCount}] 当前Granule分配的比特预算（only part3）= ${huffmanBudget} bits`);
-        // LOG(`[Granule_${GranuleCount}] 外层循环开始`);
-        let outerLoopOutput = OuterLoop(Spectrum, currentWindowType, huffmanBudget, xmin);
-        // LOG(`[Granule_${GranuleCount}] 外层循环结束：`);
-
-        // 计算尺度因子长度
-        let part2Length = 0;
-        let scalefactorCompress = 15;
-        if(currentWindowType !== WINDOW_SHORT) {
-            scalefactorCompress = CalculateScalefactorCompress(outerLoopOutput.scalefactors, currentWindowType);
-            let slens = SF_COMPRESS_INDEX[scalefactorCompress];
-            part2Length = 11 * slens[0] + 10 * slens[1];
-        }
-        else if(currentWindowType === WINDOW_SHORT) {
-            let scalefactorCompress_0 = CalculateScalefactorCompress(outerLoopOutput.scalefactors[0], currentWindowType);
-            let scalefactorCompress_1 = CalculateScalefactorCompress(outerLoopOutput.scalefactors[1], currentWindowType);
-            let scalefactorCompress_2 = CalculateScalefactorCompress(outerLoopOutput.scalefactors[2], currentWindowType);
-            // TODO 不能简单地通过比较序号大小来选择长度最大的序号，此处待改进
-            scalefactorCompress = Math.max(scalefactorCompress_0, scalefactorCompress_1, scalefactorCompress_2);
-            let slens = SF_COMPRESS_INDEX[scalefactorCompress];
-            part2Length = (6 * slens[0] + 6 * slens[1]) * 3;
-        }
-
-        ////////////////////////
-        // 构建Granule
-        ////////////////////////
-
-        let granule = new Granule(currentWindowType);
-
-        // Part 1
-        granule.scfsi = [0,0,0,0];
-        granule.part23Length = part2Length + outerLoopOutput.huffman.codeString.length;
-        granule.bigvalues = outerLoopOutput.huffman.bigvalues;
-        granule.globalGain = outerLoopOutput.globalGain;
-        granule.scalefactorCompress = scalefactorCompress;
-
-        if(granule.windowSwitchingFlag === 1) {
-            granule.tableSelect = outerLoopOutput.huffman.bigvalueTableSelect;
-            granule.subblockGain = outerLoopOutput.subblockGain;
-        }
-        else {
-            granule.tableSelect = outerLoopOutput.huffman.bigvalueTableSelect;
-            granule.region0Count = outerLoopOutput.huffman.region0Count;
-            granule.region1Count = outerLoopOutput.huffman.region1Count;
-        }
-        granule.count1TableSelect = outerLoopOutput.huffman.smallvalueTableSelect;
-
-        // Part 2
-        granule.scalefactors = outerLoopOutput.scalefactors;
-
-        // Part 3
-        granule.huffman = outerLoopOutput.huffman.codeString;
-
-
-
-        LOG(`    ★ Part23Length：${granule.part23Length}`);
-        LOG(`    ★ GlobalGain：${granule.globalGain}`);
-        LOG(`    ★ 量化步数：${outerLoopOutput.qquant}`);
-        if(currentWindowType === WINDOW_SHORT) {
-            LOG(`    ★ 尺度因子(短块0)：${granule.scalefactors[0]}`);
-            LOG(`    ★ 尺度因子(短块1)：${granule.scalefactors[1]}`);
-            LOG(`    ★ 尺度因子(短块2)：${granule.scalefactors[2]}`);
-        }
-        else {
-            LOG(`    ★ 尺度因子：${granule.scalefactors}`);
-        }
-        LOG(granule);
-
-        // 将预算内没用完的比特 回馈给比特储备池
-        AdjustReservoirSize(granule.part23Length, meanBitsPerGranule);
+        EncodeFrame([PCMData, PCMData], offset);
 
         // 反量化
         /*
@@ -220,8 +113,151 @@ function MPEG(PCMData) {
 
         LOG(`=============================================================`);
 
-        prevGranuleSubbands = currentGranuleSubbands;
-        prevWindowType = currentWindowType;
-        GranuleCount++;
     }
+}
+
+MPEG(PCMData);
+
+function EncodeFrame(PCMs, offset) {
+    // 帧间距（bits）
+    let frameLength = Math.round(BIT_RATES[BIT_RATE] * 1152 / SAMPLE_RATES[SAMPLE_RATE]);
+    LOG(`帧间距：${frameLength} bits`);
+    // 每个Granule的平均长度（含所有声道，bits）
+    let meanBitsPerGranule = (frameLength - 256) / 2;
+    LOG(`Granule平均长度：${meanBitsPerGranule} bits`);
+    // 每个Channel的平均长度（bits）
+    let meanBitsPerChannel = meanBitsPerGranule / CHANNELS;
+    LOG(`Channel平均长度：${meanBitsPerChannel} bits`);
+
+    // 设置比特储备的最大容量
+    SetReservoirMax(frameLength);
+    LOG(`最大比特储备：${RESERVOIR_MAX} bits`);
+
+    LOG(`【Granule 0】`);
+    let granule0 = EncodeGranule(PCMs, offset, meanBitsPerGranule);
+    LOG(`【Granule 1】`);
+    let granule1 = EncodeGranule(PCMs, offset + GRANULE_LENGTH, meanBitsPerGranule);
+
+    // TODO 这里需要检查比特储备池的容量，适时对granule作填充，待实现
+
+    return [granule0, granule1];
+}
+
+function EncodeGranule(PCMs, offset, meanBitsPerGranule) {
+    let channel0 = EncodeChannel(PCMs[0], offset, meanBitsPerGranule / CHANNELS);
+    let channel1 = EncodeChannel(PCMs[1], offset, meanBitsPerGranule / CHANNELS);
+    return [channel0, channel1];
+}
+
+
+function EncodeChannel(PCM, offset, meanBitsPerChannel) {
+
+    //////////////////////////////////
+    //  分 析 子 带 滤 波
+    //////////////////////////////////
+
+    let subbands = AnalysisSubbandFilter(PCM, offset);
+    PREV_SUBBANDS = subbands; // TODO
+
+    //////////////////////////////////
+    //  心 理 声 学 模 型（ 待 实 现 ）
+    //////////////////////////////////
+
+    let isAttack = (Math.random() > 0.5) ? true : false;
+    let perceptualEntropy = 470;
+    let blockType = SwitchWindowType(PREV_BLOCK_TYPE, isAttack);
+    LOG(`窗口类型：${blockType}`);
+    let xmin = new Array();
+    for(let i = 0; i < 21; i++) { // 应当区分长短块
+        xmin[i] = 1e-4;
+    }
+    PREV_BLOCK_TYPE = blockType;
+
+    //////////////////////////////////
+    //  时 频 变 换
+    //////////////////////////////////
+
+    let Spectrum = CalculateGranuleSpectrum(subbands, PREV_SUBBANDS, blockType); // TODO
+
+    // TODO 判断是否是全0的频谱
+
+    //////////////////////////////////
+    //  分 配 比 特 预 算
+    //////////////////////////////////
+
+    LOG(`当前比特储备：${RESERVOIR_SIZE}`);
+    let budget = AllocateBudget(perceptualEntropy, meanBitsPerChannel);
+    LOG(`当前Channel分配的比特预算（part2 & 3） = ${budget} bits`);
+    let huffmanBudget = budget - ((blockType !== WINDOW_SHORT) ? 74 : 126); // 假设尺度因子全满的情况下，扣除尺度因子所使用的比特，剩余的预算分配给part3（哈夫曼编码）
+    LOG(`当前Channel分配的比特预算（only part3）= ${huffmanBudget} bits`);
+
+    //////////////////////////////////
+    //  量 化 循 环
+    //////////////////////////////////
+
+    let outerLoopOutput = OuterLoop(Spectrum, blockType, huffmanBudget, xmin);
+
+    //////////////////////////////////
+    //  计 算 尺 度 因 子 长 度
+    //////////////////////////////////
+
+    let part2Length = 0;
+    let scalefactorCompress = 15;
+    if(blockType !== WINDOW_SHORT) {
+        scalefactorCompress = CalculateScalefactorCompress(outerLoopOutput.scalefactors, blockType);
+        let slens = SF_COMPRESS_INDEX[scalefactorCompress];
+        part2Length = 11 * slens[0] + 10 * slens[1];
+    }
+    else if(blockType === WINDOW_SHORT) {
+        let scalefactorCompress_0 = CalculateScalefactorCompress(outerLoopOutput.scalefactors[0], blockType);
+        let scalefactorCompress_1 = CalculateScalefactorCompress(outerLoopOutput.scalefactors[1], blockType);
+        let scalefactorCompress_2 = CalculateScalefactorCompress(outerLoopOutput.scalefactors[2], blockType);
+        // TODO 不能简单地通过比较序号大小来选择长度最大的序号，此处待改进
+        scalefactorCompress = Math.max(scalefactorCompress_0, scalefactorCompress_1, scalefactorCompress_2);
+        let slens = SF_COMPRESS_INDEX[scalefactorCompress];
+        part2Length = (6 * slens[0] + 6 * slens[1]) * 3;
+    }
+
+    //////////////////////////////////
+    //  构 造 编 码 结 果
+    //////////////////////////////////
+
+    let channel = {
+        "part23Length": part2Length + outerLoopOutput.huffman.codeString.length,
+        "bigvalues": outerLoopOutput.huffman.bigvalues,
+        "globalGain": outerLoopOutput.globalGain,
+        "scalefactorCompress": scalefactorCompress,
+        "windowSwitchingFlag": (blockType === WINDOW_NORMAL) ? 0 : 1,
+        "blockType": blockType,
+
+        "tableSelect": outerLoopOutput.huffman.bigvalueTableSelect,
+        "subblockGain": outerLoopOutput.subblockGain,
+        "region0Count": outerLoopOutput.huffman.region0Count,
+        "region1Count": outerLoopOutput.huffman.region1Count,
+
+        "count1TableSelect": outerLoopOutput.huffman.smallvalueTableSelect,
+        // Part 2
+        "scalefactors": outerLoopOutput.scalefactors,
+        // Part 3
+        "huffmanCodeBits": outerLoopOutput.huffman.codeString
+    };
+
+
+    LOG(`    ★ Part23Length：${channel.part23Length}`);
+    LOG(`    ★ GlobalGain：${channel.globalGain}`);
+    LOG(`    ★ 量化步数：${outerLoopOutput.qquant}`);
+    if(channel.blockType === WINDOW_SHORT) {
+        LOG(`    ★ 尺度因子(短块0)：${channel.scalefactors[0]}`);
+        LOG(`    ★ 尺度因子(短块1)：${channel.scalefactors[1]}`);
+        LOG(`    ★ 尺度因子(短块2)：${channel.scalefactors[2]}`);
+    }
+    else {
+        LOG(`    ★ 尺度因子：${channel.scalefactors}`);
+    }
+    LOG(channel);
+
+    // 将预算内没用完的比特 回馈给比特储备池
+    AdjustReservoirSize(channel.part23Length, meanBitsPerChannel);
+
+    return channel;
 }
