@@ -18,7 +18,7 @@ function HuffmanDecode(
 ) {
     // 计算大值区三个子分区的频点数目
     let regionLength = [0, 0, 0];
-    if(blockType !== WINDOW_SHORT) {
+    if(blockType === WINDOW_NORMAL) {
         let SFBands = ScaleFactorBands[SAMPLE_RATE][LONG_BLOCK];
         for(let sfb = 0; sfb < region0Count + 1; sfb++) {
             let sfbPartition = SFBands[sfb];
@@ -38,11 +38,21 @@ function HuffmanDecode(
         }
         regionLength[1] = bigvalues * 2 - regionLength[0];
     }
+    if(blockType === WINDOW_START || blockType === WINDOW_STOP) {
+        let SFBands = ScaleFactorBands[SAMPLE_RATE][LONG_BLOCK];
+        for(let sfb = 0; sfb < region0Count /* i.e. === 7 */ + 1; sfb++) {
+            let sfbPartition = SFBands[sfb];
+            regionLength[0] = regionLength[0] + (sfbPartition[1] - sfbPartition[0] + 1);
+        }
+        regionLength[1] = bigvalues * 2 - regionLength[0];
+    }
 
     let values = new Array();
 
     let regionNum = 3;
-    if(blockType === WINDOW_SHORT) regionNum = 2; // @reference p26
+    if(blockType === WINDOW_SHORT || blockType === WINDOW_START || blockType === WINDOW_STOP) {
+        regionNum = 2; // @reference p26
+    }
 
     let offset = 0;
     for(let region = 0; region < regionNum; region++) {

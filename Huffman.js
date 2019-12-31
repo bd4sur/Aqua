@@ -674,8 +674,8 @@ function HuffmanEncode(qspectrum576, blockType) {
         let LastSFBIndexOfBigvalues = -1;
         let BigvaluesEndIndex = BigvaluesPartition[1] - 1;
 
-        // 长块
-        if(blockType !== WINDOW_SHORT) {
+        // 普通块（长块）
+        if(blockType === WINDOW_NORMAL) {
             let SFBands = ScaleFactorBands[SAMPLE_RATE][LONG_BLOCK];
             // 确定大值区的尺度因子频带数目，计算分割点
             for(let sfb = 0; sfb < SFBands.length; sfb++) {
@@ -705,41 +705,21 @@ function HuffmanEncode(qspectrum576, blockType) {
             region01 = SFBands[Region0_SFBNum][0]; // Region 1 的起点
             region12 = SFBands[Region0_SFBNum + Region1_SFBNum][0]; // Region 2 的起点
         }
-        // 短块
-        else if(blockType === WINDOW_SHORT) {
-            let SFBands = ScaleFactorBands[SAMPLE_RATE][SHORT_BLOCK];
-            // 确定大值区的尺度因子频带数目，计算分割点
-            let sfbRightBoundry = -1; // NOTE 因为是计算右边界，所以从-1开始累加
-            for(let sfb = 0; sfb < SFBands.length; sfb++) {
-                let sfbPartition = SFBands[sfb];
-                // 576点频谱中每个SFB都包含3个子块
-                sfbRightBoundry += (sfbPartition[1] - sfbPartition[0] + 1) * 3;
-                // 因最后一个SFB并未延伸到频谱末端，所以应将其延伸到频谱末端
-                if(sfb === SFBands.length - 1) sfbRightBoundry = 576;
-                if(BigvaluesEndIndex > 0 && sfbRightBoundry >= BigvaluesEndIndex) {
-                    LastSFBIndexOfBigvalues = sfb;
-                    break;
-                }
-            }
-
-            // 计算各个region的SFB数量
-            let SFBNumberInBigvalues = LastSFBIndexOfBigvalues + 1;
-            let Region0_SFBNum = Math.round(SFBNumberInBigvalues / 3); // 注意：作为sideinfo的值应减1
-            let Region1_SFBNum = SFBNumberInBigvalues - Math.round(SFBNumberInBigvalues / 4) - Region0_SFBNum;
-            let Region2_SFBNum = SFBNumberInBigvalues - Region0_SFBNum - Region1_SFBNum;
-
-            // 计算SFB边界与region0/1_count
-            if(Region1_SFBNum <= 0) {
-                Region1_SFBNum = Region2_SFBNum;
-                Region2_SFBNum = 0;
-            }
+        // 起始块（长块）、结束块（长块）、短块（仅支持非混合的）
+        else {
             /**
-             * 短块情况下，以下两个值为标准规定，实际上并不会被编码到边信息中 @reference p26
+             * 短窗、起始窗、结束窗情况下，以下两个值为标准规定，实际上并不会被编码到边信息中 @reference p26
              * 目前暂时不实现混合块
              */ 
-            Region0Count = 8;
+            if(blockType === WINDOW_SHORT) {
+                Region0Count = 8;
+            }
+            else if(blockType === WINDOW_START || blockType === WINDOW_STOP) {
+                Region0Count = 7;
+            }
             Region1Count = 36;
 
+            let SFBands = ScaleFactorBands[SAMPLE_RATE][SHORT_BLOCK];
             for(let sfb = 0; sfb < 3; sfb++) { // NOTE 因为Region0Count=8，意味着有(8+1)/3=3个SFB
                 let sfbPartition = SFBands[sfb];
                 region01 += (sfbPartition[1] - sfbPartition[0] + 1) * 3;
