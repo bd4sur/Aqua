@@ -85,13 +85,20 @@ $("#play").click(() => {
  * 编码器的全局缓存（可优化）
  */
 
-let PREV_BLOCK_TYPE = WINDOW_NORMAL;
-let PREV_SUBBANDS = new Array();
-for(let i = 0; i < 32; i++) {
-    PREV_SUBBANDS[i] = new Array();
-    for(let j = 0; j < 18; j++) {
-        PREV_SUBBANDS[i][j] = 0;
+let BUFFER = new Array();
+
+for(let ch = 0; ch < CHANNELS; ch++) {
+    let zeros = new Array();
+    for(let i = 0; i < 32; i++) {
+        zeros[i] = new Array();
+        for(let j = 0; j < 18; j++) {
+            zeros[i][j] = 0;
+        }
     }
+    BUFFER[ch] = {
+        "PREV_BLOCK_TYPE": WINDOW_NORMAL,
+        "PREV_SUBBANDS": zeros
+    };
 }
 
 function MPEG(PCMData) {
@@ -144,20 +151,24 @@ function EncodeFrame(PCMs, offset) {
 }
 
 function EncodeGranule(PCMs, offset, meanBitsPerGranule) {
-    let channel0 = EncodeChannel(PCMs[0], offset, meanBitsPerGranule / CHANNELS);
-    let channel1 = EncodeChannel(PCMs[1], offset, meanBitsPerGranule / CHANNELS);
-    return [channel0, channel1];
+    let channels = new Array();
+    for(let ch = 0; ch < CHANNELS; ch++) {
+        LOG(`【Channel ${ch}】`);
+        let channel = EncodeChannel(PCMs[ch], offset, meanBitsPerGranule / CHANNELS, BUFFER[ch]);
+        channels.push(channel);
+    }
+    return channels;
 }
 
 
-function EncodeChannel(PCM, offset, meanBitsPerChannel) {
+function EncodeChannel(PCM, offset, meanBitsPerChannel, buffer) {
 
     //////////////////////////////////
     //  分 析 子 带 滤 波
     //////////////////////////////////
 
     let subbands = AnalysisSubbandFilter(PCM, offset);
-    PREV_SUBBANDS = subbands; // TODO
+    buffer.PREV_SUBBANDS = subbands; // TODO
 
     //////////////////////////////////
     //  心 理 声 学 模 型（ 待 实 现 ）
@@ -165,19 +176,19 @@ function EncodeChannel(PCM, offset, meanBitsPerChannel) {
 
     let isAttack = (Math.random() > 0.5) ? true : false;
     let perceptualEntropy = 470;
-    let blockType = SwitchWindowType(PREV_BLOCK_TYPE, isAttack);
+    let blockType = SwitchWindowType(buffer.PREV_BLOCK_TYPE, isAttack);
     LOG(`窗口类型：${blockType}`);
     let xmin = new Array();
     for(let i = 0; i < 21; i++) { // 应当区分长短块
         xmin[i] = 1e-4;
     }
-    PREV_BLOCK_TYPE = blockType;
+    buffer.PREV_BLOCK_TYPE = blockType;
 
     //////////////////////////////////
     //  时 频 变 换
     //////////////////////////////////
 
-    let Spectrum = CalculateGranuleSpectrum(subbands, PREV_SUBBANDS, blockType); // TODO
+    let Spectrum = CalculateGranuleSpectrum(subbands, buffer.PREV_SUBBANDS, blockType); // TODO
 
     // TODO 判断是否是全0的频谱
 
