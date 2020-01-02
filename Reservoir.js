@@ -47,6 +47,47 @@ function AllocateBudget(perceptualEntropy, meanBitsPerChannel) {
 /**
  * @description 编码一个Channel后，将编码后剩余的比特返还给比特储备池
  */
-function AdjustReservoirSize(part23Length, meanBitsPerChannel) {
+function ReturnUnusedBits(part23Length, meanBitsPerChannel) {
     RESERVOIR_SIZE += (meanBitsPerChannel - part23Length);
+}
+
+/**
+ * @description 调整比特储备的容量，使其不超过最大容量，并为8的倍数（因为main_data_begin为8的倍数），并将多余的容量填充进main_data
+ */
+function RegulateAndStuff(granules) {
+    LOG(`    ► 调整前的main_data_begin = ${RESERVOIR_SIZE / 8} bytes (${RESERVOIR_SIZE} bits)`);
+    let stuffingBits = 0;
+
+    // 若比特储备已经溢出，则将溢出部分从比特储备移除，填充进main_data
+    if(RESERVOIR_SIZE > RESERVOIR_MAX) {
+        stuffingBits += (RESERVOIR_SIZE - RESERVOIR_MAX);
+        RESERVOIR_SIZE = RESERVOIR_MAX;
+    }
+
+    // 由于main_data_begin以字节为单位，且其值等于比特储备的大小，因此将比特储备调整为小于它自己的8的倍数。被调整掉的比特，填充进main_data
+    let remainder = (RESERVOIR_SIZE & 7);
+    RESERVOIR_SIZE -= remainder;
+    stuffingBits += remainder;
+
+    LOG(`    ► 调整后的main_data_begin = ${RESERVOIR_SIZE / 8} bytes (${RESERVOIR_SIZE} bits)`);
+
+    // 将多余的比特填充进main_data，方法是修改part23Length，由formatter执行实际的比特填充。
+    // 策略是从第一个granule的第一个channel开始填充，如果充满（长度达到part23Length的上限4095），则继续填充下一channel、下一granule，直至填充完毕。
+    let isFinished = false;
+    for(let gr = 0; gr < 2; gr++) {
+        for(let ch = 0; ch < CHANNELS; ch++) {
+            if(granules[gr][ch].part23Length + stuffingBits > 4095) {
+                granules[gr][ch].part23Length = 4095;
+                stuffingBits -= (4095 - granules[gr][ch].part23Length);
+                LOG(`    ► Granule[${gr}][${ch}] 被填满至4095bits`);
+            }
+            else {
+                LOG(`    ► Granule[${gr}][${ch}] 被填充 ${stuffingBits} bits`);
+                granules[gr][ch].part23Length += stuffingBits;
+                isFinished = true;
+                break;
+            }
+        }
+        if(isFinished) break;
+    }
 }

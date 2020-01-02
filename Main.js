@@ -145,7 +145,8 @@ function EncodeFrame(PCMs, offset) {
     LOG(`【Granule 1】`);
     let granule1 = EncodeGranule(PCMs, offset + GRANULE_LENGTH, meanBitsPerGranule);
 
-    // TODO 这里需要检查比特储备池的容量，适时对granule作填充，待实现
+    // 检查比特储备池的容量，使用多余的比特对granule作填充
+    RegulateAndStuff([granule0, granule1]);
 
     return [granule0, granule1];
 }
@@ -267,8 +268,8 @@ function EncodeChannel(PCM, offset, meanBitsPerChannel, buffer) {
     }
     LOG(channel);
 
-    // 将预算内没用完的比特 回馈给比特储备池
-    AdjustReservoirSize(channel.part23Length, meanBitsPerChannel);
+    // 返还剩余比特
+    ReturnUnusedBits(channel.part23Length, meanBitsPerChannel);
 
     return channel;
 }
