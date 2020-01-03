@@ -130,7 +130,7 @@ function EncodeFrame(PCMs, offset) {
     let frameLength = Math.round(BIT_RATES[BIT_RATE] * 1152 / SAMPLE_RATES[SAMPLE_RATE]);
     LOG(`帧间距：${frameLength} bits`);
     // 每个Granule的平均长度（含所有声道，bits）
-    let meanBitsPerGranule = (frameLength - 256) / 2;
+    let meanBitsPerGranule = (frameLength - 256 - 32) / 2; // Header 32bits, SideInfo 256bits(dual)/136bits(mono)
     LOG(`Granule平均长度：${meanBitsPerGranule} bits`);
     // 每个Channel的平均长度（bits）
     let meanBitsPerChannel = meanBitsPerGranule / CHANNELS;
