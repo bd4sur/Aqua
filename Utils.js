@@ -97,6 +97,7 @@ const LOG2 = {
  * @description 返回某正整数的指定长度的二进制串
  */
 function BinaryString(intNumber, length) {
+    if(intNumber > ((1 << length) - 1)) throw "range error"; // TODO 供测试
     let seq = [];
     for(let i = 0; i < length; i++) {
         if((intNumber & 1) > 0) seq.unshift("1");

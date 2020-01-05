@@ -7,12 +7,16 @@ const FRAME_LENGTH = 1152;
 
 const BIT_RATES = [64000, 128000, 224000, 320000]; // 作为原理验证，仅支持4种码率
 
+const BIT_RATE_INDEX = ["0101", "1001", "1100", "1110"];
+
 const BIT_RATE_64K  = 0;
 const BIT_RATE_128K = 1;
 const BIT_RATE_224K = 2;
 const BIT_RATE_320K = 3;
 
 const SAMPLE_RATES = [32000, 44100, 48000];
+
+const SAMPLE_RATE_INDEX = ["10", "00", "01"];
 
 /** 用于表格索引 */
 const SAMPLE_RATE_32000 = 0;
