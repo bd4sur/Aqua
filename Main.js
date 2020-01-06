@@ -127,11 +127,14 @@ MPEG(PCMData);
 
 function EncodeFrame(PCMs, offset) {
     // 帧间距（bits）
-    let frameLength = Math.round(BIT_RATES[BIT_RATE] * 1152 / SAMPLE_RATES[SAMPLE_RATE]);
+    let frameLength = Math.floor((BIT_RATES[BIT_RATE] * 1152 / SAMPLE_RATES[SAMPLE_RATE]) / 8) * 8; // 变为8的倍数
     LOG(`帧间距：${frameLength} bits`);
+
     // 每个Granule的平均长度（含所有声道，bits）
-    let meanBitsPerGranule = (frameLength - 256 - 32) / 2; // Header 32bits, SideInfo 256bits(dual)/136bits(mono)
+    let sideLength = (CHANNELS >= 2) ? 256 : 136;
+    let meanBitsPerGranule = (frameLength - sideLength - 32) / 2; // Header 32bits, SideInfo 256bits(dual)/136bits(mono)
     LOG(`Granule平均长度：${meanBitsPerGranule} bits`);
+
     // 每个Channel的平均长度（bits）
     let meanBitsPerChannel = meanBitsPerGranule / CHANNELS;
     LOG(`Channel平均长度：${meanBitsPerChannel} bits`);
