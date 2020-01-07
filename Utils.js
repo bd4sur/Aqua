@@ -2,12 +2,12 @@
  * @description 在网页上输出
  */
 function LOG(x) {
-    console.log(x);
-    if(typeof x === "object") {
-        x = JSON.stringify(x);
-    }
-    let html = $("#output").html();
-    $("#output").html(html + x + `<br>`);
+    // console.log(x);
+    // if(typeof x === "object") {
+    //     x = JSON.stringify(x);
+    // }
+    // let html = $("#output").html();
+    // $("#output").html(html + x + `<br>`);
 }
 
 // 复数类
@@ -97,7 +97,10 @@ const LOG2 = {
  * @description 返回某正整数的指定长度的二进制串
  */
 function BinaryString(intNumber, length) {
-    if(intNumber > ((1 << length) - 1)) throw "range error"; // TODO 供测试
+    if(intNumber > ((1 << length) - 1)) {
+        // debugger;
+        throw "range error"; // TODO 供测试
+    }
     let seq = [];
     for(let i = 0; i < length; i++) {
         if((intNumber & 1) > 0) seq.unshift("1");

@@ -418,10 +418,10 @@ function OuterLoop(
             // 2 尺度因子的值是否有超过其各自的动态范围？如果有超过，则退出
             let isScalefactorExceeded = false;
             for(let sb = 0; sb <= 10; sb++) {
-                if(LongBlockScalefactors[sb] > 15) { isScalefactorExceeded = true; break; }
+                if(LongBlockScalefactors[sb] >= 15) { isScalefactorExceeded = true; break; }
             }
             for(let sb = 11; sb <= 20; sb++) {
-                if(LongBlockScalefactors[sb] > 7) { isScalefactorExceeded = true; break; }
+                if(LongBlockScalefactors[sb] >= 7) { isScalefactorExceeded = true; break; }
             }
             if(isScalefactorExceeded === true) { return result; }
 
@@ -488,10 +488,10 @@ function OuterLoop(
                 // 2 尺度因子的值是否有超过其各自的动态范围？如果有超过，则退出
                 let isScalefactorExceeded = false;
                 for(let sb = 0; sb <= 5; sb++) {
-                    if(ShortBlockScalefactors[window][sb] > 15) { isScalefactorExceeded = true; break; }
+                    if(ShortBlockScalefactors[window][sb] >= 15) { isScalefactorExceeded = true; break; }
                 }
                 for(let sb = 5; sb <= 11; sb++) {
-                    if(ShortBlockScalefactors[window][sb] > 7) { isScalefactorExceeded = true; break; }
+                    if(ShortBlockScalefactors[window][sb] >= 7) { isScalefactorExceeded = true; break; }
                 }
                 if(isScalefactorExceeded === true) {
                     isFinished[window] = true;

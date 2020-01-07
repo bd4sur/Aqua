@@ -101,29 +101,52 @@ for(let ch = 0; ch < CHANNELS; ch++) {
     };
 }
 
+let STREAM = new Array(); // 字节流
+
+let frameCount = 0;
+
 function MPEG(PCMData) {
 
-    for(let offset = 0; offset < PCMData.length; offset += FRAME_LENGTH) {
+    for(let offset = 0; offset < FRAME_LENGTH * 500/*PCMData.length*/; offset += FRAME_LENGTH) {
 
-        EncodeFrame([PCMData, PCMData], offset);
+        console.log(frameCount);
 
-        // 反量化
-        /*
-        function ReQuantize(ix, globalGain) {
-            let xr = new Array();
-            for(let i = 0; i < ix.length; i++) {
-                xr[i] = Math.sign(ix[i]) * Math.pow(Math.abs(ix[i]), (4/3)) * Math.pow(ROOT_2_4, globalGain - 210);
+        let mainDataBegin = RESERVOIR_SIZE;
+        let frame = EncodeFrame([PCMData, PCMData], offset);
+
+        /**
+         * @reference p22 对于44100Hz情况，要计算isPadding
+         */
+        let isPadding = false;
+        let rest = 0;
+        if(offset > 0) {
+            let dif = (144 * BIT_RATES[BIT_RATE] % SAMPLE_RATES[SAMPLE_RATE]);
+            rest -= dif;
+            if(rest < 0) {
+                isPadding = true;
+                rest += SAMPLE_RATES[SAMPLE_RATE];
             }
-            return xr;
+            else {
+                isPadding = false;
+            }
         }
-        */
+
+        let frameStream = FormatFrameBitStream(frame, isPadding, mainDataBegin);
+
+        STREAM = STREAM.concat(frameStream);
 
         LOG(`=============================================================`);
-
+        frameCount++;
     }
+
+    console.log(STREAM);
+
+    let buffer = new Uint8Array(STREAM);
+    let file = new File([buffer], `test.mp3`, {type: `audio/mpeg`});
+    saveAs(file, `test.mp3`, true);
 }
 
-MPEG(PCMData);
+// MPEG(PCMData);
 
 function EncodeFrame(PCMs, offset) {
     // 帧间距（bits）
@@ -178,13 +201,13 @@ function EncodeChannel(PCM, offset, meanBitsPerChannel, buffer) {
     //  心 理 声 学 模 型（ 待 实 现 ）
     //////////////////////////////////
 
-    let isAttack = (Math.random() > 0.5) ? true : false;
+    let isAttack = (Math.random() > 0.8) ? true : false;
     let perceptualEntropy = 470;
     let blockType = SwitchWindowType(buffer.PREV_BLOCK_TYPE, isAttack);
     LOG(`窗口类型：${blockType}`);
     let xmin = new Array();
     for(let i = 0; i < 21; i++) { // 应当区分长短块
-        xmin[i] = 1e-4;
+        xmin[i] = 1e-6;
     }
     buffer.PREV_BLOCK_TYPE = blockType;
 
@@ -228,9 +251,12 @@ function EncodeChannel(PCM, offset, meanBitsPerChannel, buffer) {
         let scalefactorCompress_1 = CalculateScalefactorCompress(outerLoopOutput.scalefactors[1], blockType);
         let scalefactorCompress_2 = CalculateScalefactorCompress(outerLoopOutput.scalefactors[2], blockType);
         // TODO 不能简单地通过比较序号大小来选择长度最大的序号，此处待改进
-        scalefactorCompress = Math.max(scalefactorCompress_0, scalefactorCompress_1, scalefactorCompress_2);
-        let slens = SF_COMPRESS_INDEX[scalefactorCompress];
-        part2Length = (6 * slens[0] + 6 * slens[1]) * 3;
+        let length0 = SF_COMPRESS_INDEX[scalefactorCompress_0][0] + SF_COMPRESS_INDEX[scalefactorCompress_0][1];
+        let length1 = SF_COMPRESS_INDEX[scalefactorCompress_1][0] + SF_COMPRESS_INDEX[scalefactorCompress_1][1];
+        let length2 = SF_COMPRESS_INDEX[scalefactorCompress_2][0] + SF_COMPRESS_INDEX[scalefactorCompress_2][1];
+        let slens = Math.max(length0, length1, length2);
+        // part2Length = (6 * slens[0] + 6 * slens[1]) * 3;
+        part2Length = 18 * slens;
     }
 
     //////////////////////////////////

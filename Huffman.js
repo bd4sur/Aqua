@@ -699,6 +699,11 @@ function HuffmanEncode(qspectrum576, blockType) {
                 Region1_SFBNum = Region2_SFBNum;
                 Region2_SFBNum = 0;
             }
+
+            // 由于sideInfo中Region0/1Count长度为4bit/3bit，因此需要限幅
+            Region0_SFBNum = (Region0_SFBNum > 16) ? 16 : Region0_SFBNum;
+            Region1_SFBNum = (Region1_SFBNum > 8)  ? 8  : Region1_SFBNum;
+
             Region0Count = Region0_SFBNum - 1;
             Region1Count = Region1_SFBNum - 1;
 
