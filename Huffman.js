@@ -83,13 +83,14 @@ const HuffmanTable24 = {
 
 const HuffmanTableDuple = [
     // Table 0
-    {
-        "maxvalue": 0,
-        "linbits": 0,
-        "table": {
-            "0 0": ""
-        }
-    },
+    // {
+    //     "maxvalue": 0,
+    //     "linbits": 0,
+    //     "table": {
+    //         "0 0": ""
+    //     }
+    // },
+    null,
 
     // Table 1
     {
@@ -746,7 +747,7 @@ function HuffmanEncode(qspectrum576, blockType) {
         }
 
         let tableSelect0 = -1, tableSelect1 = -1, tableSelect2 = -1;
-        for(let i = 0; i < HuffmanTableDuple.length; i++) {
+        for(let i = 1; i < HuffmanTableDuple.length; i++) { // NOTE 不使用表1
             let htable = HuffmanTableDuple[i];
             if(htable === null) continue;
             let huffmanTableMaxValue = htable.maxvalue;
@@ -754,7 +755,7 @@ function HuffmanEncode(qspectrum576, blockType) {
             if(tableSelect1 < 0 && MaxValue1 <= huffmanTableMaxValue) { tableSelect1 = i; }
             if(tableSelect2 < 0 && MaxValue2 <= huffmanTableMaxValue) { tableSelect2 = i; }
             // 如果所有的表格都已确定，则终止循环
-            if(tableSelect0 >= 0 && tableSelect1 >= 0 && tableSelect2 >= 0) break;
+            if(tableSelect0 >= 1 && tableSelect1 >= 1 && tableSelect2 >= 1) break; // NOTE 不使用表1
         }
 
         BigvalueTableSelect[0] = tableSelect0;

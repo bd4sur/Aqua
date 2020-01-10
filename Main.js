@@ -27,7 +27,16 @@ function Render(rawAudioData, cutoffFreq) {
         AudioBufferSourceNode.buffer = audioBuffer;
         AudioBufferSourceNode.start(0);
 
-        MPEG(leftChannel);
+        // 采样率
+        if(SampleRate === 44100) { SAMPLE_RATE = SAMPLE_RATE_44100; }
+        else if(SampleRate === 48000) { SAMPLE_RATE = SAMPLE_RATE_48000; }
+        else if(SampleRate === 32000) { SAMPLE_RATE = SAMPLE_RATE_32000; }
+        else {
+            console.warn(`MPEG-1 不支持采样率 ${SampleRate}Hz，默认采用 44100Hz`);
+            SAMPLE_RATE = SAMPLE_RATE_44100;
+        }
+
+        MPEG(leftChannel, rightChannel);
 /*
         let StartTime = AudioContext.currentTime;
 
@@ -105,14 +114,18 @@ let STREAM = new Array(); // 字节流
 
 let frameCount = 0;
 
-function MPEG(PCMData) {
+function MPEG(PCM_left, PCM_right) {
 
-    for(let offset = 0; offset < FRAME_LENGTH * 500/*PCMData.length*/; offset += FRAME_LENGTH) {
+    console.log(`采样率：${SAMPLE_RATES[SAMPLE_RATE]}Hz`);
+    console.log(`预计帧数：${Math.ceil(PCM_left.length / 1152)}`);
 
-        console.log(frameCount);
+    for(let offset = 0; offset < PCM_left.length; offset += FRAME_LENGTH) {
+    // for(let offset = 0; offset < FRAME_LENGTH * 500; offset += FRAME_LENGTH) {
+
+        console.log(`正在处理第 ${frameCount} 帧`);
 
         let mainDataBegin = RESERVOIR_SIZE;
-        let frame = EncodeFrame([PCMData, PCMData], offset);
+        let frame = EncodeFrame([PCM_left, PCM_right], offset);
 
         /**
          * @reference p22 对于44100Hz情况，要计算isPadding
@@ -146,7 +159,7 @@ function MPEG(PCMData) {
     saveAs(file, `test.mp3`, true);
 }
 
-// MPEG(PCMData);
+// MPEG(PCM_left);
 
 function EncodeFrame(PCMs, offset) {
     // 帧间距（bits）
@@ -195,21 +208,19 @@ function EncodeChannel(PCM, offset, meanBitsPerChannel, buffer) {
     //////////////////////////////////
 
     let subbands = AnalysisSubbandFilter(PCM, offset);
-    buffer.PREV_SUBBANDS = subbands; // TODO
 
     //////////////////////////////////
     //  心 理 声 学 模 型（ 待 实 现 ）
     //////////////////////////////////
 
-    let isAttack = (Math.random() > 0.8) ? true : false;
-    let perceptualEntropy = 470;
+    let isAttack = false; //(Math.random() > 0.8) ? true : false;
+    let perceptualEntropy = 0;
     let blockType = SwitchWindowType(buffer.PREV_BLOCK_TYPE, isAttack);
     LOG(`窗口类型：${blockType}`);
     let xmin = new Array();
     for(let i = 0; i < 21; i++) { // 应当区分长短块
-        xmin[i] = 1e-6;
+        xmin[i] = 1e-12;
     }
-    buffer.PREV_BLOCK_TYPE = blockType;
 
     //////////////////////////////////
     //  时 频 变 换
@@ -299,6 +310,13 @@ function EncodeChannel(PCM, offset, meanBitsPerChannel, buffer) {
 
     // 返还剩余比特
     ReturnUnusedBits(channel.part23Length, meanBitsPerChannel);
+
+    //////////////////////////////////
+    //  保 存 前 一 granule 结 果
+    //////////////////////////////////
+
+    buffer.PREV_SUBBANDS = subbands;
+    buffer.PREV_BLOCK_TYPE = blockType;
 
     return channel;
 }
