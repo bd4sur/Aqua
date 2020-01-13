@@ -3,7 +3,7 @@
 
 ////////////////////////////////
 //
-//  缓 冲 区
+//  缓 冲 区 （TODO 每个声道需要一个缓冲区，这块需要完善）
 //
 ////////////////////////////////
 
@@ -33,7 +33,8 @@ let TCPS_LONG  = new Array(); // [[wlow, whigh]]
 let TCPS_SHORT = new Array(); // [[wlow, whigh]]
 
 // 扩散函数
-let SPREADING_FUNCTION = new Array();
+let SPREADING_FUNCTION_LONG  = new Array();
+let SPREADING_FUNCTION_SHORT = new Array();
 
 /**
  *  心理声学模型参数初始化
@@ -56,14 +57,57 @@ function PAM2_Init() {
         wcount += fft_lines;
     }
 
-    // SPREADING_FUNCTION init
+    // SPREADING_FUNCTION_L/S init
+    // NOTE 扩散函数的输入值以bark为单位，但是SPREADING_FUNCTION_*是以TCP为下标
     for(let bi = 0; bi < TABLE_C7_LONG.length; bi++) {
-        SPREADING_FUNCTION[bi] = new Array();
+        SPREADING_FUNCTION_LONG[bi] = new Array();
         for(let bj = 0; bj < TABLE_C7_LONG.length; bj++) {
-            SPREADING_FUNCTION[bi][bj] = SpreadingFunction(bi, bj);
+            let ibark = TABLE_C7_LONG[bi][4]; // bval在TABLE_C7_LONG表中的下标是4
+            let jbark = TABLE_C7_LONG[bj][4];
+            SPREADING_FUNCTION_LONG[bi][bj] = SpreadingFunction(ibark, jbark);
+        }
+    }
+    for(let bi = 0; bi < TABLE_C7_SHORT.length; bi++) {
+        SPREADING_FUNCTION_SHORT[bi] = new Array();
+        for(let bj = 0; bj < TABLE_C7_SHORT.length; bj++) {
+            let ibark = TABLE_C7_SHORT[bi][4]; // bval在TABLE_C7_LONG表中的下标是4
+            let jbark = TABLE_C7_SHORT[bj][4];
+            SPREADING_FUNCTION_SHORT[bi][bj] = SpreadingFunction(ibark, jbark);
         }
     }
 
+}
+
+/**
+ * 心理声学模型：主流程
+ * @input  PCM序列、granuleOffset（即一个576点序列的起始点）
+ * @output PE、blockType、xmin
+ */
+function PAM2(PCM, granuleOffset) {
+
+    // 初始化全局缓存
+
+    // 计算长块/短块频谱
+    
+    // 计算长块/短块预测频谱
+
+    // 计算不可预测度
+
+    // 以长块参数计算阈值和PE
+
+    // 根据PE判断是否Attack
+
+    // 如果切换到短块，则计算3个短块的阈值
+
+    // 修改全局缓存
+
+    // 返回结果
+
+    return {
+        "PE": 0,
+        "blockType": WINDOW_NORMAL,
+        "xmin": 0 // 长块1个，短块3个
+    };
 }
 
 
@@ -194,12 +238,9 @@ function CalculateUnpredictability(
 }
 
 /**
- * Part1
+ * 计算SMR和PE（长块模式）
  */
-function CalculateRatiosAndRE(polarSpectrum, Unpred_w) {
-
-    // 最大的 TCP index （bmax）
-    let bmax = TCPS_LONG.length - 1;
+function CalculateRatiosAndPE(longBlockPolarSpectrum, Unpred_w) {
 
     // (e) 计算阈值计算区间（Threshold Calculation Partition）内的能量、以及不可预测度加权的能量
 
@@ -210,7 +251,7 @@ function CalculateRatiosAndRE(polarSpectrum, Unpred_w) {
         let ebsum = 0;
         let cbsum = 0;
         for(let w = TCPS_LONG[b][0]; w <= TCPS_LONG[b][1]; w++) {
-            let rw = polarSpectrum[0][w];
+            let rw = longBlockPolarSpectrum[0][w];
             ebsum += (rw * rw);
             cbsum += (rw * rw * Unpred_w[w]);
         }
@@ -227,9 +268,7 @@ function CalculateRatiosAndRE(polarSpectrum, Unpred_w) {
         let ecb_sum = 0;
         let ct_sum = 0;
         for(let bb = 0; bb < TABLE_C7_LONG.length; bb++) {
-            let bval_bb = TABLE_C7_LONG[bb][4]; // bval在TABLE_C7_LONG表中的下标是4
-            let bval_b  = TABLE_C7_LONG[b][4];
-            let sprdngf = SPREADING_FUNCTION[bval_bb][bval_b];
+            let sprdngf = SPREADING_FUNCTION_LONG[bb][b];
             ecb_sum += (Energy[bb] * sprdngf);
             ct_sum  += (Unpred[bb] * sprdngf);
         }
@@ -301,18 +340,36 @@ function CalculateRatiosAndRE(polarSpectrum, Unpred_w) {
         thr[b] = Math.max(qthr, min_nb);
     }
 
-    // 将thr[b]通过表C8直接转换到尺度因子频带上
+    // 将thr[b]通过表C8直接转换到尺度因子频带上，并计算最终的ratio（Part2）
 
     let en_Sb = new Array();
     let thr_Sb = new Array();
 
-    // TODO
-
-    // 计算每个尺度因子频带的最终的ratio
-
     let ratio_Sb = new Array();
 
-    // TODO
+    for(let sb = 0; sb < 21; sb++) { // 长块SFB有21个
+        let bu = TABLE_C8_LONG[sb][1];
+        let bo = TABLE_C8_LONG[sb][2];
+        let w1 = TABLE_C8_LONG[sb][3];
+        let w2 = TABLE_C8_LONG[sb][4];
+
+        let en_sum = w1 * Energy[bu] + w2 * Energy[bo];
+        let thr_sum = w1 * thr[bu] + w2 * thr[bo];
+    
+        for(let b = bu + 1; b <= bo - 1; b++) {
+            en_sum += Energy[b];
+            thr_sum += thr[b];
+        }
+        en_Sb[sb] = en_sum;
+        thr_Sb[sb] = thr_sum;
+
+        if(en_Sb[sb] !== 0) {
+            ratio_Sb[sb] = thr_Sb[sb] / en_Sb[sb];
+        }
+        else {
+            ratio_Sb[sb] = 0;
+        }
+    }
 
     // 计算感知熵（PE）
 
@@ -332,8 +389,95 @@ function CalculateRatiosAndRE(polarSpectrum, Unpred_w) {
     // 返回结果
 
     return {
+        "threshold": thr_Sb,
         "ratio": ratio_Sb,
         "PE": PE
+    };
+
+}
+
+/**
+ * 计算单个短块的阈值 (p94)
+ */
+function CalculateShortBlockRatios(shortBlockPolarSpectrum) {
+
+    // 计算每个TCP的能量
+
+    let Energy = new Array();
+
+    for(let b = 0; b < TABLE_C7_SHORT.length; b++) {
+        let ebsum = 0;
+        for(let w = TCPS_SHORT[b][0]; w <= TCPS_SHORT[b][1]; w++) {
+            let rw = shortBlockPolarSpectrum[0][w];
+            ebsum += (rw * rw);
+        }
+        Energy[b] = ebsum;
+    }
+
+    // 与扩散函数作卷积
+
+    let ecb = new Array();
+
+    for(let b = 0; b < TABLE_C7_SHORT.length; b++) {
+        let ecb_sum = 0;
+        for(let bb = 0; bb < TABLE_C7_SHORT.length; bb++) {
+            let sprdngf = SPREADING_FUNCTION_SHORT[bb][b];
+            ecb_sum += (Energy[bb] * sprdngf);
+        }
+        ecb[b] = ecb_sum;
+    }
+
+    // 计算能量阈值nb以及thr。与长块不同之处是：SNR通过查表而不是计算得到。
+
+    let nb  = new Array();
+    let thr = new Array();
+
+    for(let b = 0; b < TABLE_C7_SHORT.length; b++) {
+        let norm = TABLE_C7_SHORT[b][2]; // norm在TABLE_C7_SHORT表中的下标是2
+        let SNR =  TABLE_C7_SHORT[b][3]; //  SNR在TABLE_C7_SHORT表中的下标是3
+        nb[b] = ecb[b] * norm * Math.pow(10, (SNR[b] / 10)); // NOTE 注意此处式中没有负号，因为负号在表里
+
+        let qthr = TABLE_C7_SHORT[b][1]; // qthr在TABLE_C7_LONG表中的下标是1
+        thr[b] = Math.max(qthr, nb[b]);
+    }
+
+    // 将thr[b]通过表C8直接转换到尺度因子频带上，并计算最终的ratio（Part2）
+    // 这里流程与长块是相同的，只是需要使用短块的参数
+
+    let en_Sb = new Array();
+    let thr_Sb = new Array();
+
+    let ratio_Sb = new Array();
+
+    for(let sb = 0; sb < 12; sb++) { // 短块SFB有12个
+        let bu = TABLE_C8_SHORT[sb][1];
+        let bo = TABLE_C8_SHORT[sb][2];
+        let w1 = TABLE_C8_SHORT[sb][3];
+        let w2 = TABLE_C8_SHORT[sb][4];
+
+        let en_sum = w1 * Energy[bu] + w2 * Energy[bo];
+        let thr_sum = w1 * thr[bu] + w2 * thr[bo];
+    
+        for(let b = bu + 1; b <= bo - 1; b++) {
+            en_sum += Energy[b];
+            thr_sum += thr[b];
+        }
+        en_Sb[sb] = en_sum;
+        thr_Sb[sb] = thr_sum;
+
+        if(en_Sb[sb] !== 0) {
+            ratio_Sb[sb] = thr_Sb[sb] / en_Sb[sb];
+        }
+        else {
+            ratio_Sb[sb] = 0;
+        }
+    }
+
+    // 返回结果
+
+    return {
+        "threshold": thr_Sb,
+        "ratio": ratio_Sb
     };
 
 }

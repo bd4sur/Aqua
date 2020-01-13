@@ -116,6 +116,9 @@ let frameCount = 0;
 
 function MPEG(PCM_left, PCM_right) {
 
+    // 心理声学模型初始化
+    PAM2_Init();
+
     console.log(`采样率：${SAMPLE_RATES[SAMPLE_RATE]}Hz`);
     console.log(`预计帧数：${Math.ceil(PCM_left.length / 1152)}`);
 
