@@ -23,11 +23,10 @@ MP3编码器学习、研究、开发项目。目标是实现可用的 MPEG-1 Aud
 |2019.12.24|实现比特储备机制|
 |2020.01.05|实现比特流组装|
 |2020.01.07|输出第一个合式MP3文件|
-|2020.01.10|【里程碑】尝试编码若干个完整的音乐文件，效果不错|
+|2020.01.14|【里程碑】修正若干重大错误，尝试编码若干个完整的音乐文件，效果不错|
 |进行中|排除短块错误|
 |进行中|实现第二心理声学模型|
 |进行中|实现外层循环的预加重环节|
-|进行中|实现联合立体声|
 |进行中|给项目起个好听的名字（|
 |进行中|完善项目文档|
 |进行中|进一步测试，尽可能排除所有已知故障，处理掉所有TODO|
@@ -45,15 +44,17 @@ MP3编码器学习、研究、开发项目。目标是实现可用的 MPEG-1 Aud
 
 不打算实现（但是要理解原理）的特性如下：
 
+- 联合立体声
 - 混合块
 - 尺度因子预测（scfsi）
 - VBR
+- 回放增益
 
 ## 可视化
 
-- [MDCT所使用的4种窗口及其转换](https://mikukonai.com/MP3-Study/MDCT-windows.html)
-- [低通滤波](https://mikukonai.com/MP3-Study/LPF.html)（支线任务）
-- [分析子带滤波器组](https://mikukonai.com/MP3-Study/Filterbank.html)
+- [MDCT所使用的4种窗口及其转换](https://mikukonai.com/MP3-Study/demo/MDCT-windows.html)
+- [低通滤波](https://mikukonai.com/MP3-Study/demo/LPF.html)（支线任务）
+- [分析子带滤波器组](https://mikukonai.com/MP3-Study/demo/Filterbank.html)
 
 ## 研究笔记
 

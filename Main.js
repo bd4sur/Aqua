@@ -1,4 +1,6 @@
 
+let ENCODER_TIMER;
+
 let PCM;
 let AudioContext = new window.AudioContext();
 let filteredLeft, filteredRight;
@@ -37,32 +39,7 @@ function Render(rawAudioData, cutoffFreq) {
         }
 
         MPEG(leftChannel, rightChannel);
-/*
-        let StartTime = AudioContext.currentTime;
 
-        let timer = setInterval(() => {
-            let offset = Math.round((AudioContext.currentTime - StartTime) * SampleRate);
-            $("#timer").html(`${offset} / ${leftChannel.length} (${(offset / leftChannel.length * 100).toFixed(1)}%)`);
-            $("#progressbar").css("width", `${(offset / leftChannel.length * 100).toFixed(2)}%`);
-
-            // 滤波器组
-            let subbands = AnalysisSubbandFilter(leftChannel, offset);
-
-            // 绘制
-            for(let i = 0; i < 32; i++) {
-                DrawFrame(cvs[i], i, subbands[i]);
-            }
-
-            if(offset >= leftChannel.length) {
-                AudioBufferSourceNode.stop();
-                clearInterval(timer);
-                $("#playLabel").html("播放");
-                $("#ThrobberPlaying").hide();
-                $("#play").attr("data-state", "stopped");
-            }
-
-        }, 10);
-*/
     });
 }
 
@@ -120,19 +97,21 @@ function MPEG(PCM_left, PCM_right) {
     PAM2_Init();
 
     console.log(`采样率：${SAMPLE_RATES[SAMPLE_RATE]}Hz`);
-    console.log(`预计帧数：${Math.ceil(PCM_left.length / 1152)}`);
+    let frameNumber = Math.ceil(PCM_left.length / 1152);
+    console.log(`预计帧数：${frameNumber}`);
 
-    for(let offset = 0; offset < PCM_left.length; offset += FRAME_LENGTH) {
-    // for(let offset = 0; offset < FRAME_LENGTH * 500; offset += FRAME_LENGTH) {
+    let offset = 0;
 
-        console.log(`正在处理第 ${frameCount} 帧`);
+    ENCODER_TIMER = setInterval(() => {
+        console.log(`正在处理第 ${frameCount} / ${frameNumber} 帧`);
+
+        let startTime = Date.now();
 
         let mainDataBegin = RESERVOIR_SIZE;
         let frame = EncodeFrame([PCM_left, PCM_right], offset);
 
-        /**
-         * @reference p22 对于44100Hz情况，要计算isPadding
-         */
+        // p22 对于44100Hz情况，要计算isPadding
+
         let isPadding = false;
         let rest = 0;
         if(offset > 0) {
@@ -151,15 +130,31 @@ function MPEG(PCM_left, PCM_right) {
 
         STREAM = STREAM.concat(frameStream);
 
+        let endTime = Date.now();
+
+        let duration = endTime - startTime;
+        let speed = ((1152 / SAMPLE_RATES[SAMPLE_RATE] * 1000) / duration).toFixed(2);
+
+        console.log(`  耗时：${duration}ms`);
+        console.log(`  倍速：${speed}x`);
+
+        $("#timer").html(`${frameCount} / ${frameNumber} (${(frameCount / frameNumber * 100).toFixed(2)}%) (${speed}x)`);
+        $("#progressbar").css("width", `${(frameCount / frameNumber * 100).toFixed(2)}%`);
+
         LOG(`=============================================================`);
         frameCount++;
-    }
+        offset += FRAME_LENGTH;
 
-    console.log(STREAM);
-
-    let buffer = new Uint8Array(STREAM);
-    let file = new File([buffer], `test.mp3`, {type: `audio/mpeg`});
-    saveAs(file, `test.mp3`, true);
+        if(offset >= PCM_left.length) {
+            clearInterval(ENCODER_TIMER);
+            $("#timer").html(`${frameNumber} / ${frameNumber} (100%)`);
+            $("#progressbar").css("width", `100%`);
+            console.log(STREAM);
+            let buffer = new Uint8Array(STREAM);
+            let file = new File([buffer], `test.mp3`, {type: `audio/mpeg`});
+            saveAs(file, `test.mp3`, true);
+        }
+    }, 0);
 }
 
 // MPEG(PCM_left);

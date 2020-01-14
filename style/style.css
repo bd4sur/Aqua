@@ -3,7 +3,7 @@ body {
     padding: 0;
 }
 .Title {
-    font-size: 18px; margin: 20px 0; color: #222; font-weight: bold; line-height: 40px; padding: 0 20px;
+    font-size: 18px; margin: 20px 0; color: #222; font-weight: bold; line-height: 40px;
 }
 @media(min-width:651px) { /* Desktop */
     .Main {
@@ -24,7 +24,6 @@ body {
 .Block {
     /* border-radius: 10px; */
     /* box-shadow: 0 2px 2px 0 rgba(64,64,64,0.1), 0 1px 3px 1px rgba(64,64,64,0.3); */
-    padding: 10px 20px;
     margin: 10px 0;
 }
 canvas {
