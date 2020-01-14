@@ -35,9 +35,9 @@ function CalculateQuantNoise(xr, ix, quantStep, blockType) {
         let sum = 0;
         for(let i = SFB[sbindex][0]; i <= SFB[sbindex][1]; i++) {
             let temp1 = (ix[i] === 0) ? Math.abs(xr[i]) : (Math.abs(xr[i]) - Math.pow(Math.abs(ix[i]), (4/3)) * Math.pow(ROOT_2_4, quantStep)); // NOTE 与标准原文的差异：给ix[i]加了绝对值
-            sum += (temp1 * temp1 / (SFB[sbindex][1] - SFB[sbindex][0] + 1));
+            sum += (temp1 * temp1);
         }
-        xfsf[sbindex] = sum;
+        xfsf[sbindex] = sum / (SFB[sbindex][1] - SFB[sbindex][0] + 1); // NOTE 此处dist10与IS有出入，以dist10为准。
     }
     return xfsf;
 }

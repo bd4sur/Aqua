@@ -79,10 +79,10 @@ function ReduceAliasing(longBlockSpectrum) {
         let indexB = 18 * i;
         // 每个交叠间隙执行8个蝶形结
         for(let butterfly = 0; butterfly < 8; butterfly++) {
-            let inputA = input[indexA];
-            let inputB = input[indexB];
-            output[indexA] =  inputA * ALIASING_CS[butterfly] + inputB * ALIASING_CA[butterfly];
-            output[indexB] = -inputA * ALIASING_CA[butterfly] + inputB * ALIASING_CS[butterfly];
+            let inputA = input[indexA - butterfly];
+            let inputB = input[indexB + butterfly];
+            output[indexA - butterfly] =  inputA * ALIASING_CS[butterfly] + inputB * ALIASING_CA[butterfly];
+            output[indexB + butterfly] = -inputA * ALIASING_CA[butterfly] + inputB * ALIASING_CS[butterfly];
             indexA--;
             indexB++;
         }

@@ -70,6 +70,15 @@ function AnalysisSubbandFilter(PCMData, GranuleStartOffset) {
         }
     }
 
+    // NOTE 由于子带滤波器的输入缓冲区是反向的，因此需要对输出结果做一些处理。这个问题是在dist10源码中发现的。
+    for(let band = 0; band < 32; band++) {
+        for(let k = 0; k < 18; k++) {
+            if((band % 2 === 1) && (k % 2 === 1)) {
+                Subbands[band][k] *= -1;
+            }
+        }
+    }
+
     return Subbands;
 }
 
