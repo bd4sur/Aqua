@@ -16,6 +16,13 @@ function HuffmanDecode(
     bigvalueTableSelects,   /* 大值区各子分区的哈夫曼表编号 */
     smallvalueTableSelect   /* 小值区哈夫曼表（0/1） */
 ) {
+
+    if(bitstr.length <= 0) {
+        let zeros = new Array();
+        for(let i = 0; i < 576; i++) { zeros[i] = 0; }
+        return zeros;
+    }
+
     // 计算大值区三个子分区的频点数目
     let regionLength = [0, 0, 0];
     if(blockType === WINDOW_NORMAL) {
@@ -57,40 +64,49 @@ function HuffmanDecode(
     let offset = 0;
     for(let region = 0; region < regionNum; region++) {
         let count = regionLength[region];
-        let htree = HUFFMAN_TREES_DUPLE[bigvalueTableSelects[region]];
-        let linbits = HuffmanTableDuple[bigvalueTableSelects[region]].linbits;
 
-        // LOG(`Region ${region}: Length = ${count} Linbits = ${linbits}`);
-
-        while(count > 0) {
-            let hresult = DecodePrefix(bitstr.substring(offset), htree);
-            let x = hresult.x;
-            let y = hresult.y;
-            offset += hresult.runlength;
-
-            if(x === 15 && linbits > 0) {
-                x += BinaryStringToUint(bitstr.substring(offset, offset + linbits), linbits);
-                offset += linbits;
+        if(bigvalueTableSelects[region] === 0) {
+            for(let i = 0; i < count; i++) {
+                values.push(0);
+                values.push(0);
             }
-            if(x !== 0) {
-                x *= ((bitstr[offset] === "1") ? (-1) : 1);
-                offset += 1;
-            }
-            if(y === 15 && linbits > 0) {
-                y += BinaryStringToUint(bitstr.substring(offset, offset + linbits), linbits);
-                offset += linbits;
-            }
-            if(y !== 0) {
-                y *= ((bitstr[offset] === "1") ? (-1) : 1);
-                offset += 1;
-            }
+        }
+        else {
+            let htree = HUFFMAN_TREES_DUPLE[bigvalueTableSelects[region]];
+            let linbits = HuffmanTableDuple[bigvalueTableSelects[region]].linbits;
 
-            values.push(x);
-            values.push(y);
+            // LOG(`Region ${region}: Length = ${count} Linbits = ${linbits}`);
 
-            count -= 2;
+            while(count > 0) {
+                let hresult = DecodePrefix(bitstr.substring(offset), htree);
+                let x = hresult.x;
+                let y = hresult.y;
+                offset += hresult.runlength;
 
-            // LOG(`Decoded: ${x} ${y}`);
+                if(x === 15 && linbits > 0) {
+                    x += BinaryStringToUint(bitstr.substring(offset, offset + linbits), linbits);
+                    offset += linbits;
+                }
+                if(x !== 0) {
+                    x *= ((bitstr[offset] === "1") ? (-1) : 1);
+                    offset += 1;
+                }
+                if(y === 15 && linbits > 0) {
+                    y += BinaryStringToUint(bitstr.substring(offset, offset + linbits), linbits);
+                    offset += linbits;
+                }
+                if(y !== 0) {
+                    y *= ((bitstr[offset] === "1") ? (-1) : 1);
+                    offset += 1;
+                }
+
+                values.push(x);
+                values.push(y);
+
+                count -= 2;
+
+                // LOG(`Decoded: ${x} ${y}`);
+            }
         }
     }
 

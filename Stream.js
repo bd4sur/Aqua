@@ -87,6 +87,7 @@ function FormatFrameBitStream(frame, isPadding, mainDataBegin) {
         let granule = frame[gr];
         for(let ch = 0; ch < CHANNELS; ch++) {
             let channel = granule[ch];
+            let channelMainData = new Array();
 
             // Part 2: Scalefactors
 
@@ -95,36 +96,38 @@ function FormatFrameBitStream(frame, isPadding, mainDataBegin) {
 
             let windowSwitchingFlag = ((channel.blockType === WINDOW_NORMAL) ? "0" : "1");
 
-            if(windowSwitchingFlag === "1") {
+            if((windowSwitchingFlag === "1") && (channel.blockType === WINDOW_SHORT)) {
                 for(let sfb = 0; sfb < 6; sfb++) {
                     for(let window = 0; window < 3; window++) {
-                        mainData += BinaryString(channel.scalefactors[window][sfb], slen1);
+                        channelMainData += BinaryString(channel.scalefactors[window][sfb], slen1);
                     }
                 }
                 for(let sfb = 6; sfb < 12; sfb++) {
                     for(let window = 0; window < 3; window++) {
-                        mainData += BinaryString(channel.scalefactors[window][sfb], slen2);
+                        channelMainData += BinaryString(channel.scalefactors[window][sfb], slen2);
                     }
                 }
             }
-            else if (windowSwitchingFlag === "0") {
+            else {
                 for(let sfb = 0; sfb < 11; sfb++) {
-                    mainData += BinaryString(channel.scalefactors[sfb], slen1);
+                    channelMainData += BinaryString(channel.scalefactors[sfb], slen1);
                 }
                 for(let sfb = 11; sfb < 21; sfb++) {
-                    mainData += BinaryString(channel.scalefactors[sfb], slen2);
+                    channelMainData += BinaryString(channel.scalefactors[sfb], slen2);
                 }
             }
 
             // Part 3: Huffman
 
-            mainData += channel.huffmanCodeBits;
+            channelMainData += channel.huffmanCodeBits;
 
             // 根据part23Length填充0
 
-            for(let i = mainData.length; i < channel.part23Length; i++) {
-                mainData += "0";
+            for(let i = channelMainData.length; i < channel.part23Length; i++) {
+                channelMainData += "0";
             }
+
+            mainData = mainData.concat(channelMainData);
         }
     }
 

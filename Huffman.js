@@ -83,14 +83,13 @@ const HuffmanTable24 = {
 
 const HuffmanTableDuple = [
     // Table 0
-    // {
-    //     "maxvalue": 0,
-    //     "linbits": 0,
-    //     "table": {
-    //         "0 0": ""
-    //     }
-    // },
-    null,
+    {
+        "maxvalue": 0,
+        "linbits": 0,
+        "table": {
+            "0 0": ""
+        }
+    },
 
     // Table 1
     {
@@ -546,33 +545,6 @@ function DecodePrefix(str, htree) {
     }
 }
 
-// let htrees = HuffmanTreeInit();
-// let res = DecodePrefix("00010000000000000000", htrees.HuffmanTreeDuple[15]);
-// LOG(res);
-
-
-/**
- * @description 计算序列中最后一个非零值的下标，用于确定零值区的起始点。如果序列全为0，则返回-1。
- */
-function LastNzeroIndex(seq) {
-    for(let i = seq.length - 1; i >= 0; i--) {
-        if(Math.abs(seq[i]) === 0) continue;
-        else return i;
-    }
-    return -1;
-}
-
-/**
- * @description 计算序列中最后一个大于等于2的值（即所谓的大值）的下标，用于确定零值区的起始点。如果序列没有大值，则返回-1。
- */
-function LastBigvalueIndex(seq) {
-    for(let i = seq.length - 1; i >= 0; i--) {
-        if(Math.abs(seq[i]) < 2) continue;
-        else return i;
-    }
-    return -1;
-}
-
 /**
  * @description 使用指定的小值哈夫曼表（0/1），对小值四元组进行编码
  */
@@ -614,30 +586,43 @@ function EncodeDuple(x, y, tableSelect) {
 /**
  * @description 576点量化频谱分区：一般分为大值区（bigvalues）、小值区（smallvalues）和零值区（zeros）
  */
-function PartitionQuantizedSpectrum(qspectrum576) {
-    // 先计算小值区和零值区的起始位置
-    let smallvaluesStartIndex = LastBigvalueIndex(qspectrum576) + 1;
-    let zerosStartIndex = LastNzeroIndex(qspectrum576) + 1;
-    // 小值区起点位置向后移动，对齐到偶数（因大值是成对的）
-    if((smallvaluesStartIndex & 1) > 0) {
-        smallvaluesStartIndex++;
+function PartitionQuantizedSpectrum(spect576, blockType) {
+    let rzero = 0;
+    let big_values = 0;
+    let count1 = 0;
+
+    if(blockType === WINDOW_SHORT) {
+        big_values = 288;
+        count1 = 0;
     }
-    // 零值区起点向后移动，使小值区长度(zerosStartIndex - smallvaluesStartIndex)为4的倍数
-    while(((zerosStartIndex - smallvaluesStartIndex) & 3) > 0) {
-        zerosStartIndex++;
+    else {
+        let i;
+        for(i = 576; i > 1; i-= 2) {
+            if((spect576[i-1] === 0) && (spect576[i-2] === 0)) {
+                rzero++;
+            }
+            else break;
+        }
+
+        count1 = 0;
+        for( ; i > 3; i -= 4) {
+            if( Math.abs(spect576[i-1]) <= 1 &&
+                Math.abs(spect576[i-2]) <= 1 &&
+                Math.abs(spect576[i-3]) <= 1 &&
+                Math.abs(spect576[i-4]) <= 1
+            ) {
+                count1++
     }
-    // 如果零值区起点超过了频谱宽度，说明零值区的长度不足2，则将小值区起点向后移动两位
-    // 例如 .. 3 2|0 0 0 0 1 0 - -|
-    // 应为 .. 3 2 0 0|0 0 1 0|
-    if(zerosStartIndex > qspectrum576.length) {
-        smallvaluesStartIndex += 2;
-        zerosStartIndex = qspectrum576.length;
+            else break;
     }
-    // 返回各区域的边界
+
+        big_values = i / 2;
+    }
+
     return {
-        "bigvalues": [0, smallvaluesStartIndex],
-        "smallvalues": [smallvaluesStartIndex, zerosStartIndex],
-        "zeros": [zerosStartIndex, qspectrum576.length]
+        "bigvalues":   [0, big_values * 2],
+        "smallvalues": [big_values * 2, count1 * 4 + big_values * 2],
+        "zeros":       [count1 * 4 + big_values * 2, spect576.length]
     };
 }
 
@@ -658,7 +643,7 @@ function HuffmanEncode(qspectrum576, blockType) {
     }
 
     // 对量化后的频谱分区
-    let partition = PartitionQuantizedSpectrum(qspectrum576);
+    let partition = PartitionQuantizedSpectrum(qspectrum576, blockType);
     let BigvaluesPartition = partition.bigvalues;
     let SmallvaluesPartition = partition.smallvalues;
 
@@ -747,7 +732,7 @@ function HuffmanEncode(qspectrum576, blockType) {
         }
 
         let tableSelect0 = -1, tableSelect1 = -1, tableSelect2 = -1;
-        for(let i = 1; i < HuffmanTableDuple.length; i++) { // NOTE 不使用表1
+        for(let i = 0; i < HuffmanTableDuple.length; i++) {
             let htable = HuffmanTableDuple[i];
             if(htable === null) continue;
             let huffmanTableMaxValue = htable.maxvalue;
@@ -755,7 +740,7 @@ function HuffmanEncode(qspectrum576, blockType) {
             if(tableSelect1 < 0 && MaxValue1 <= huffmanTableMaxValue) { tableSelect1 = i; }
             if(tableSelect2 < 0 && MaxValue2 <= huffmanTableMaxValue) { tableSelect2 = i; }
             // 如果所有的表格都已确定，则终止循环
-            if(tableSelect0 >= 1 && tableSelect1 >= 1 && tableSelect2 >= 1) break; // NOTE 不使用表1
+            if(tableSelect0 >= 0 && tableSelect1 >= 0 && tableSelect2 >= 0) break; // NOTE 不使用表1
         }
 
         BigvalueTableSelect[0] = tableSelect0;
@@ -827,6 +812,9 @@ function HuffmanEncode(qspectrum576, blockType) {
 
     // 将大值区和小值区编码拼接起来
     let HuffmanCodeString = BigvaluesCodeString + SmallvaluesCodeString;
+
+    if(Region0Count < 0) Region0Count = 0;
+    if(Region1Count < 0) Region1Count = 0;
 
     return {
         "blockType": blockType,

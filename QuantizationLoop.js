@@ -104,7 +104,7 @@ function DemuxShortBlockSpectrum(spect576) {
 /**
  * @description 计算尺度因子的scalefac_compress  TODO 不支持混合块模式
  * @reference 2.4.2.7(p25-26)
- * @input  Scalefactors - 一组尺度因子（21个（长块）或者12个（短块））
+ * @input  Scalefactors - 一组长块尺度因子（21个），或者三组短块尺度因子（3×12个）
  * @input  blockType - 窗口类型（长块或短块）
  * @output scalefac_compress
  */
@@ -123,10 +123,12 @@ function CalculateScalefactorCompress(Scalefactors, blockType) {
     else if(blockType === WINDOW_SHORT) {
         // 计算0~5和6~11两个SFB区间的最大值
         for(let i = 0; i <= 5; i++) {
-            if(Scalefactors[i] > maxValue1) maxValue1 = Scalefactors[i];
+            let sf = Math.max(Scalefactors[0][i], Scalefactors[1][i], Scalefactors[2][i]);
+            if(sf > maxValue1) maxValue1 = sf;
         }
         for(let i = 6; i <= 11; i++) {
-            if(Scalefactors[i] > maxValue2) maxValue2 = Scalefactors[i];
+            let sf = Math.max(Scalefactors[0][i], Scalefactors[1][i], Scalefactors[2][i]);
+            if(sf > maxValue2) maxValue2 = sf;
         }
     }
     // 计算各自的位数
@@ -170,9 +172,10 @@ function InnerLoop(Spectrum, blockType, bitRateLimit) {
 
         // 满足条件退出
         if(huffman !== null && huffman.codeString.length < bitRateLimit) {
+            if(huffman.codeString.length === 0) globalGain = 0; // 静音情况
             return {
                 "huffman": huffman,
-                "globalGain": globalGain,
+                "globalGain": Math.min(globalGain, 255),
                 "subblockGain": [0, 0, 0],
                 "qquant": qquant,
                 "quantizedSpectrum576": quantizedSpectrum576

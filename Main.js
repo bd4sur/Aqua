@@ -146,6 +146,7 @@ function MPEG(PCM_left, PCM_right) {
         offset += FRAME_LENGTH;
 
         if(offset >= PCM_left.length) {
+        // if(frameCount >= 100) {
             clearInterval(ENCODER_TIMER);
             $("#timer").html(`${frameNumber} / ${frameNumber} (100%)`);
             $("#progressbar").css("width", `100%`);
@@ -211,7 +212,7 @@ function EncodeChannel(PCM, offset, meanBitsPerChannel, buffer) {
     //  心 理 声 学 模 型（ 待 实 现 ）
     //////////////////////////////////
 
-    let isAttack = false; //(Math.random() > 0.8) ? true : false;
+    let isAttack = false; //(Math.random() > 0.95) ? true : false;
     let perceptualEntropy = 0;
     let blockType = SwitchWindowType(buffer.PREV_BLOCK_TYPE, isAttack);
     LOG(`窗口类型：${blockType}`);
@@ -249,23 +250,13 @@ function EncodeChannel(PCM, offset, meanBitsPerChannel, buffer) {
     //////////////////////////////////
 
     let part2Length = 0;
-    let scalefactorCompress = 15;
-    if(blockType !== WINDOW_SHORT) {
-        scalefactorCompress = CalculateScalefactorCompress(outerLoopOutput.scalefactors, blockType);
+    let scalefactorCompress = CalculateScalefactorCompress(outerLoopOutput.scalefactors, blockType);
         let slens = SF_COMPRESS_INDEX[scalefactorCompress];
+    if(blockType !== WINDOW_SHORT) {
         part2Length = 11 * slens[0] + 10 * slens[1];
     }
     else if(blockType === WINDOW_SHORT) {
-        let scalefactorCompress_0 = CalculateScalefactorCompress(outerLoopOutput.scalefactors[0], blockType);
-        let scalefactorCompress_1 = CalculateScalefactorCompress(outerLoopOutput.scalefactors[1], blockType);
-        let scalefactorCompress_2 = CalculateScalefactorCompress(outerLoopOutput.scalefactors[2], blockType);
-        // TODO 不能简单地通过比较序号大小来选择长度最大的序号，此处待改进
-        let length0 = SF_COMPRESS_INDEX[scalefactorCompress_0][0] + SF_COMPRESS_INDEX[scalefactorCompress_0][1];
-        let length1 = SF_COMPRESS_INDEX[scalefactorCompress_1][0] + SF_COMPRESS_INDEX[scalefactorCompress_1][1];
-        let length2 = SF_COMPRESS_INDEX[scalefactorCompress_2][0] + SF_COMPRESS_INDEX[scalefactorCompress_2][1];
-        let slens = Math.max(length0, length1, length2);
-        // part2Length = (6 * slens[0] + 6 * slens[1]) * 3;
-        part2Length = 18 * slens;
+        part2Length = (6 * slens[0] + 6 * slens[1]) * 3;
     }
 
     //////////////////////////////////

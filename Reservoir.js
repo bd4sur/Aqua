@@ -9,12 +9,12 @@ let RESERVOIR_SIZE = 0;
  */
 function SetReservoirMax(frameLength) {
     // 根据当前帧长度修改比特储备池最大长度
-    if(frameLength > 7680) { // NOTE 7680是320k/48kHz的帧比特数（320000*1152/48000=7680）
-        RESERVOIR_MAX = 0;
-    }
-    else {
-        RESERVOIR_MAX = 7680 - frameLength;
-    }
+    // if(frameLength > 7680) { // NOTE 7680是320k/48kHz的帧比特数（320000*1152/48000=7680）
+    //     RESERVOIR_MAX = 0;
+    // }
+    // else {
+    //     RESERVOIR_MAX = 7680 - frameLength;
+    // }
     // 因为mainDataBegin为9bit，因此最多能表示511*8=4088bit的比特储备池
     if(RESERVOIR_MAX > 4088) {
         RESERVOIR_MAX = 4088;
@@ -77,8 +77,8 @@ function RegulateAndStuff(granules) {
     for(let gr = 0; gr < 2; gr++) {
         for(let ch = 0; ch < CHANNELS; ch++) {
             if(granules[gr][ch].part23Length + stuffingBits > 4095) {
-                granules[gr][ch].part23Length = 4095;
                 stuffingBits -= (4095 - granules[gr][ch].part23Length);
+                granules[gr][ch].part23Length = 4095;
                 LOG(`    ► Granule[${gr}][${ch}] 被填满至4095bits`);
             }
             else {

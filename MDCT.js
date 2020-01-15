@@ -4,7 +4,7 @@
  * @reference C.1.5.3.3(p96)
  */
 function WindowNormal(i) {
-    return (i >= 0 && i <= 36) ? Math.sin(Math.PI * (i + 0.5) / 36) :
+    return (i >= 0 && i < 36) ? Math.sin(Math.PI * (i + 0.5) / 36) :
            0;
 }
 
@@ -24,7 +24,7 @@ function WindowStart(i) {
  * @reference C.1.5.3.3(p96)
  */
 function WindowShort(i) {
-    return (i >= 0 && i <= 12) ? Math.sin(Math.PI * (i + 0.5) / 12) :
+    return (i >= 0 && i < 12) ? Math.sin(Math.PI * (i + 0.5) / 12) :
            0;
 }
 
@@ -36,7 +36,7 @@ function WindowStop(i) {
     return (i >= 0  && i < 6 ) ? 0:
            (i >= 6  && i < 12) ? Math.sin(Math.PI * (i + 0.5 - 6) / 12) :
            (i >= 12 && i < 18) ? 1 :
-           (i >= 18 && i <=36) ? Math.sin(Math.PI * (i + 0.5) / 36) :
+           (i >= 18 && i < 36) ? Math.sin(Math.PI * (i + 0.5) / 36) :
            0;
 }
 
@@ -90,27 +90,6 @@ function ReduceAliasing(longBlockSpectrum) {
     return output;
 }
 
-/**
- * @description 窗口切换
- * @reference Fig.C.7(p95)
- * @input  prevWindowType - 上一个Granule的窗口类型
- * @input  isAttack - 由PAM2给出的是否attack的判断（true/false）
- * @output 当前Granule的窗口类型
- */
-function SwitchWindowType(prevWindowType, isAttack) {
-    if(prevWindowType === WINDOW_NORMAL) {
-        return (isAttack) ? WINDOW_START : WINDOW_NORMAL;
-    }
-    else if(prevWindowType === WINDOW_START) {
-        return WINDOW_SHORT;
-    }
-    else if(prevWindowType === WINDOW_SHORT) {
-        return (isAttack) ? WINDOW_SHORT : WINDOW_STOP;
-    }
-    else if(prevWindowType === WINDOW_STOP) {
-        return (isAttack) ? WINDOW_START : WINDOW_NORMAL;
-    }
-}
 
 /**
  * @description 计算一个Granule的频谱输出，含MDCT和去混叠（仅长块）

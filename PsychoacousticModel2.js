@@ -112,6 +112,29 @@ function PAM2(PCM, granuleOffset) {
 
 
 /**
+ * @description 窗口切换
+ * @reference Fig.C.7(p95)
+ * @input  prevWindowType - 上一个Granule的窗口类型
+ * @input  isAttack - 由PAM2给出的是否attack的判断（true/false）
+ * @output 当前Granule的窗口类型
+ */
+function SwitchWindowType(prevWindowType, isAttack) {
+    if(prevWindowType === WINDOW_NORMAL) {
+        return (isAttack) ? WINDOW_START : WINDOW_NORMAL;
+    }
+    else if(prevWindowType === WINDOW_START) {
+        return WINDOW_SHORT;
+    }
+    else if(prevWindowType === WINDOW_SHORT) {
+        return (isAttack) ? WINDOW_SHORT : WINDOW_STOP;
+    }
+    else if(prevWindowType === WINDOW_STOP) {
+        return (isAttack) ? WINDOW_START : WINDOW_NORMAL;
+    }
+}
+
+
+/**
  * @description 计算扩散函数c(w)
  * @reference C.1.5.3.2.1(p80) & D.2.3(p129)
  * @input  i - 从频点i（Bark）被扩散

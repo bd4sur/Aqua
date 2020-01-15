@@ -61,20 +61,15 @@ function AnalysisSubbandFilter(PCMData, GranuleStartOffset) {
     }
     // 将结果转换为32个频带的结果
     let Subbands = new Array();
-    for(let i = 0; i < Outputs.length; i++) {
-        for(let j = 0; j < Outputs[i].length; j++) {
-            if(Subbands[j] === undefined) {
-                Subbands[j] = new Array();
+    for(let t = 0; t < Outputs.length; t++) {
+        for(let band = 0; band < Outputs[t].length; band++) {
+            if(Subbands[band] === undefined) {
+                Subbands[band] = new Array();
             }
-            Subbands[j][i] = Outputs[i][j];
-        }
-    }
-
-    // NOTE 由于子带滤波器的输入缓冲区是反向的，因此需要对输出结果做一些处理。这个问题是在dist10源码中发现的。
-    for(let band = 0; band < 32; band++) {
-        for(let k = 0; k < 18; k++) {
-            if((band % 2 === 1) && (k % 2 === 1)) {
-                Subbands[band][k] *= -1;
+            Subbands[band][t] = Outputs[t][band];
+            // NOTE 由于子带滤波器的输入缓冲区是反向的，因此需要对输出结果做处理。这个问题是在dist10源码中发现的。
+            if((band % 2 === 1) && (t % 2 === 1)) {
+                Subbands[band][t] *= -1;
             }
         }
     }
