@@ -740,7 +740,7 @@ function HuffmanEncode(qspectrum576, blockType) {
             if(tableSelect1 < 0 && MaxValue1 <= huffmanTableMaxValue) { tableSelect1 = i; }
             if(tableSelect2 < 0 && MaxValue2 <= huffmanTableMaxValue) { tableSelect2 = i; }
             // 如果所有的表格都已确定，则终止循环
-            if(tableSelect0 >= 0 && tableSelect1 >= 0 && tableSelect2 >= 0) break; // NOTE 不使用表1
+            if(tableSelect0 >= 0 && tableSelect1 >= 0 && tableSelect2 >= 0) break;
         }
 
         BigvalueTableSelect[0] = tableSelect0;
