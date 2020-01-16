@@ -83,8 +83,6 @@ function ReduceAliasing(longBlockSpectrum) {
             let inputB = input[indexB + butterfly];
             output[indexA - butterfly] =  inputA * ALIASING_CS[butterfly] + inputB * ALIASING_CA[butterfly];
             output[indexB + butterfly] = -inputA * ALIASING_CA[butterfly] + inputB * ALIASING_CS[butterfly];
-            indexA--;
-            indexB++;
         }
     }
     return output;
