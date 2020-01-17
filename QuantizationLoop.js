@@ -141,6 +141,22 @@ function CalculateScalefactorCompress(Scalefactors, blockType) {
 
 
 /**
+ * @description 计算part2（尺度因子）长度
+ */
+function CalculatePart2Length(scalefactorCompress, blockType) {
+    let part2Length = 0;
+    let slens = SF_COMPRESS_INDEX[scalefactorCompress];
+    if(blockType !== WINDOW_SHORT) {
+        part2Length = 11 * slens[0] + 10 * slens[1];
+    }
+    else if(blockType === WINDOW_SHORT) {
+        part2Length = (6 * slens[0] + 6 * slens[1]) * 3;
+    }
+    return part2Length;
+}
+
+
+/**
  * @description 内层循环（码率控制循环）
  */
 function InnerLoop(Spectrum, blockType, bitRateLimit) {
@@ -285,6 +301,8 @@ function OuterLoop(
                 "blockType": windowType,
                 "scalefactors": LongBlockScalefactors,
                 "scalefactorScale": scalefactorScale,
+                "scalefactorCompress": 15,
+                "part23Length": 0,
                 // 以下是内层循环的结果
                 "huffman": innerLoopOutput.huffman,
                 "globalGain": innerLoopOutput.globalGain,
@@ -294,27 +312,43 @@ function OuterLoop(
             };
 
             // 【检查退出条件】
+            let isExit = false;
 
             // 1 所有的尺度因子频带都被放大过？如果是，则退出
             let isAllSfbAmplified = true;
             for(let sb = 0; sb < LongBlockSFBNumber; sb++) {
                 if(LongBlockScalefactors[sb] === 0) { isAllSfbAmplified = false; break; }
             }
-            if(isAllSfbAmplified === true) { return result; }
-
-            // 2 尺度因子的值是否有超过其各自的动态范围？如果有超过，则退出
-            let isScalefactorExceeded = false;
-            for(let sb = 0; sb <= 10; sb++) {
-                if(LongBlockScalefactors[sb] >= 15) { isScalefactorExceeded = true; break; }
+            if(isAllSfbAmplified === false) {
+                // 2 尺度因子的值是否有超过其各自的动态范围？如果有超过，则退出
+                let isScalefactorExceeded = false;
+                for(let sb = 0; sb <= 10; sb++) {
+                    if(LongBlockScalefactors[sb] >= 15) { isScalefactorExceeded = true; break; }
+                }
+                for(let sb = 11; sb <= 20; sb++) {
+                    if(LongBlockScalefactors[sb] >= 7) { isScalefactorExceeded = true; break; }
+                }
+                if(isScalefactorExceeded === false) {
+                    // 3 还有超限的尺度因子频带吗？如果没有，则退出
+                    if(sfbsOverXmin.length <= 0) {
+                        isExit = true;
+                    }
+                }
+                else {
+                    isExit = true;
+                }
             }
-            for(let sb = 11; sb <= 20; sb++) {
-                if(LongBlockScalefactors[sb] >= 7) { isScalefactorExceeded = true; break; }
+            else {
+                isExit = true;
             }
-            if(isScalefactorExceeded === true) { return result; }
-
-            // 3 还有超限的尺度因子频带吗？如果没有，则退出
-            if(sfbsOverXmin.length <= 0) { return result; }
-
+            //////// EXIT ////////
+            if(isExit) {
+                let scalefactorCompress = CalculateScalefactorCompress(result.scalefactors, result.blockType);
+                let part2Length = CalculatePart2Length(scalefactorCompress, result.blockType);
+                result.scalefactorCompress = scalefactorCompress;
+                result.part23Length = part2Length + result.huffman.codeString.length;
+                return result;
+            }
         }
         /////////////////////////////
         //  短 块
@@ -393,11 +427,14 @@ function OuterLoop(
             } // 子块循环结束
 
             // 所有子块都处理完毕
+            //////// EXIT ////////
             if(isFinished[0] === true && isFinished[1] === true && isFinished[2] === true) {
-                return {
+                let result = {
                     "blockType": windowType,
                     "scalefactors": ShortBlockScalefactors,
                     "scalefactorScale": scalefactorScale,
+                    "scalefactorCompress": 15,
+                    "part23Length": 0,
                     // 以下是内层循环的结果
                     "huffman": innerLoopOutput.huffman,
                     "globalGain": innerLoopOutput.globalGain,
@@ -405,6 +442,12 @@ function OuterLoop(
                     "qquant": innerLoopOutput.qquant,
                     "quantizedSpectrum576": innerLoopOutput.quantizedSpectrum576
                 };
+                // 计算尺度因子长度
+                let scalefactorCompress = CalculateScalefactorCompress(result.scalefactors, result.blockType);
+                let part2Length = CalculatePart2Length(scalefactorCompress, result.blockType);
+                result.scalefactorCompress = scalefactorCompress;
+                result.part23Length = part2Length + result.huffman.codeString.length;
+                return result;
             }
 
         } // 短块分支结束

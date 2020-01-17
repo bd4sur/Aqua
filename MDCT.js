@@ -60,6 +60,24 @@ function MDCT(input, length) {
     return output;
 }
 
+
+/**
+ * @description 去混叠蝶形结的系数
+ * @reference Table.B.9(p65)
+ * 
+ * NOTE ALIASING_CS 和 ALIASING_CA 的计算方法
+ * for(let i = 0; i < 8; i++) {
+ *     let ci = ALIASING_REDUCTION_COEFFICIENTS[i];
+ *     ALIASING_CS[i] = 1 / Math.sqrt(1 + ci * ci);
+ *     ALIASING_CA[i] = ci / Math.sqrt(1 + ci * ci);
+ * }
+ * 
+ */
+const ALIASING_REDUCTION_COEFFICIENTS = [-0.6, -0.535, -0.33, -0.185, -0.095, -0.041, -0.0142, -0.0037];
+const ALIASING_CS = [0.8574929257125443, 0.8817419973177052, 0.9496286491027328, 0.9833145924917902, 0.9955178160675858, 0.9991605581781475, 0.9998991952444471, 0.9999931550702803];
+const ALIASING_CA = [-0.5144957554275266, -0.47173196856497235, -0.31337745420390184, -0.18191319961098118, -0.09457419252642066, -0.04096558288530405, -0.01419856857247115, -0.0036999746737600373];
+
+
 /**
  * @description 去混叠蝶形结运算（仅用于长块频谱）
  * @reference Fig.A.5(p96) Table.B.9(p65) C.1.5.3.3(p96-97) Fig.C.8(p97)
@@ -70,11 +88,11 @@ function ReduceAliasing(longBlockSpectrum) {
     let input = longBlockSpectrum;
     let output = new Array();
     // 首先以input初始化output
-    for(let i = 0; i < GRANULE_LENGTH; i++) {
+    for(let i = 0; i < 576; i++) {
         output[i] = input[i];
     }
     // 每两个长块（18点子序列）之间执行蝶形结，共31个交叠间隙
-    for(let i = 1; i < GRANULE_LENGTH / 18; i++) { // 1~31（从1开始）
+    for(let i = 1; i < 32; i++) { // 1~31（从1开始）
         let indexA = 18 * i - 1;
         let indexB = 18 * i;
         // 每个交叠间隙执行8个蝶形结

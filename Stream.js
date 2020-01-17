@@ -17,8 +17,8 @@ function FormatFrameBitStream(frame, isPadding, mainDataBegin) {
     fixedData += "1";                       // ID = 1, MP3
     fixedData += "01";                      // Layer 3 = 01
     fixedData += "1";                       // no CRC = 1
-    fixedData += BIT_RATE_INDEX[BIT_RATE];  // Bitrate index
-    fixedData += SAMPLE_RATE_INDEX[SAMPLE_RATE]; // Sample rate index
+    fixedData += BIT_RATE_BINCODE[BIT_RATE];  // Bitrate index
+    fixedData += SAMPLE_RATE_BINCODE[SAMPLE_RATE]; // Sample rate index
     fixedData += (isPadding) ? "1" : "0";   // padding bit
     fixedData += "0";                       // private bit
     fixedData += (CHANNELS >= 2) ? "00" : "11"; // 仅支持stereo和mono
@@ -51,11 +51,9 @@ function FormatFrameBitStream(frame, isPadding, mainDataBegin) {
             fixedData += BinaryString(channel.bigvalues, 9);
             fixedData += BinaryString(channel.globalGain, 8);
             fixedData += BinaryString(channel.scalefactorCompress, 4);
+            fixedData += String(channel.windowSwitchingFlag);
 
-            let windowSwitchingFlag = ((channel.blockType === WINDOW_NORMAL) ? "0" : "1");
-            fixedData += String(windowSwitchingFlag);
-
-            if(windowSwitchingFlag === "1") {
+            if(channel.windowSwitchingFlag === "1") {
                 fixedData += BinaryString(channel.blockType, 2);
                 fixedData += "0"; // mixed_block_flag
                 for(let region = 0; region < 2; region++) {
@@ -65,7 +63,7 @@ function FormatFrameBitStream(frame, isPadding, mainDataBegin) {
                     fixedData += "000"; // TODO 暂未实现 subblock_gain，设置为0
                 }
             }
-            else if(windowSwitchingFlag === "0") {
+            else if(channel.windowSwitchingFlag === "0") {
                 for(let region = 0; region < 3; region++) {
                     fixedData += BinaryString(channel.tableSelect[region], 5);
                 }
@@ -94,9 +92,7 @@ function FormatFrameBitStream(frame, isPadding, mainDataBegin) {
             let slen1 = SF_COMPRESS_INDEX[channel.scalefactorCompress][0];
             let slen2 = SF_COMPRESS_INDEX[channel.scalefactorCompress][1];
 
-            let windowSwitchingFlag = ((channel.blockType === WINDOW_NORMAL) ? "0" : "1");
-
-            if((windowSwitchingFlag === "1") && (channel.blockType === WINDOW_SHORT)) {
+            if((channel.windowSwitchingFlag === "1") && (channel.blockType === WINDOW_SHORT)) {
                 for(let sfb = 0; sfb < 6; sfb++) {
                     for(let window = 0; window < 3; window++) {
                         channelMainData += BinaryString(channel.scalefactors[window][sfb], slen1);

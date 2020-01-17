@@ -1,9 +1,7 @@
 
 let ENCODER_TIMER;
 
-let PCM;
 let AudioContext = new window.AudioContext();
-let filteredLeft, filteredRight;
 
 let rawAudioData;
 
@@ -17,7 +15,7 @@ fileSelector.onchange = () => {
     Reader.readAsArrayBuffer(file);
 };
 
-function Render(rawAudioData, cutoffFreq) {
+function Render(rawAudioData) {
     AudioContext.decodeAudioData(rawAudioData, (audioBuffer) => {
         // 获取两个声道的原始数据
         let SampleRate = audioBuffer.sampleRate;
@@ -44,25 +42,10 @@ function Render(rawAudioData, cutoffFreq) {
 }
 
 $("#play").click(() => {
-    let cutoff = parseFloat($("#cutoff").val());
-
     let state = $("#play").attr("data-state");
     if(state === "stopped") {
         $("#playLabel").html("暂停");
-        $("#ThrobberPlaying").show();
-        Render(rawAudioData, cutoff);
-        $("#play").attr("data-state", "playing");
-    }
-    else if(state === "playing") {
-        AudioContext.suspend();
-        $("#playLabel").html("继续播放");
-        $("#ThrobberPlaying").hide();
-        $("#play").attr("data-state", "pausing");
-    }
-    else if(state === "pausing") {
-        AudioContext.resume();
-        $("#playLabel").html("暂停");
-        $("#ThrobberPlaying").show();
+        Render(rawAudioData);
         $("#play").attr("data-state", "playing");
     }
 });
@@ -96,7 +79,7 @@ function MPEG(PCM_left, PCM_right) {
     // 心理声学模型初始化
     PAM2_Init();
 
-    console.log(`采样率：${SAMPLE_RATES[SAMPLE_RATE]}Hz`);
+    console.log(`采样率：${SAMPLE_RATE_VALUE[SAMPLE_RATE]}Hz`);
     let frameNumber = Math.ceil(PCM_left.length / 1152);
     console.log(`预计帧数：${frameNumber}`);
 
@@ -115,11 +98,11 @@ function MPEG(PCM_left, PCM_right) {
         let isPadding = false;
         let rest = 0;
         if(offset > 0) {
-            let dif = (144 * BIT_RATES[BIT_RATE] % SAMPLE_RATES[SAMPLE_RATE]);
+            let dif = (144 * BIT_RATE_VALUE[BIT_RATE] % SAMPLE_RATE_VALUE[SAMPLE_RATE]);
             rest -= dif;
             if(rest < 0) {
                 isPadding = true;
-                rest += SAMPLE_RATES[SAMPLE_RATE];
+                rest += SAMPLE_RATE_VALUE[SAMPLE_RATE];
             }
             else {
                 isPadding = false;
@@ -133,7 +116,7 @@ function MPEG(PCM_left, PCM_right) {
         let endTime = Date.now();
 
         let duration = endTime - startTime;
-        let speed = ((1152 / SAMPLE_RATES[SAMPLE_RATE] * 1000) / duration).toFixed(2);
+        let speed = ((1152 / SAMPLE_RATE_VALUE[SAMPLE_RATE] * 1000) / duration).toFixed(2);
 
         console.log(`  耗时：${duration}ms`);
         console.log(`  倍速：${speed}x`);
@@ -143,7 +126,7 @@ function MPEG(PCM_left, PCM_right) {
 
         LOG(`=============================================================`);
         frameCount++;
-        offset += FRAME_LENGTH;
+        offset += 1152;
 
         if(offset >= PCM_left.length) {
         // if(frameCount >= 100) {
@@ -158,11 +141,10 @@ function MPEG(PCM_left, PCM_right) {
     }, 0);
 }
 
-// MPEG(PCM_left);
 
 function EncodeFrame(PCMs, offset) {
     // 帧间距（bits）
-    let frameLength = Math.floor((BIT_RATES[BIT_RATE] * 1152 / SAMPLE_RATES[SAMPLE_RATE]) / 8) * 8; // 变为8的倍数
+    let frameLength = Math.floor((BIT_RATE_VALUE[BIT_RATE] * 1152 / SAMPLE_RATE_VALUE[SAMPLE_RATE]) / 8) * 8; // 变为8的倍数
     LOG(`帧间距：${frameLength} bits`);
 
     // 每个Granule的平均长度（含所有声道，bits）
@@ -170,18 +152,13 @@ function EncodeFrame(PCMs, offset) {
     let meanBitsPerGranule = (frameLength - sideLength - 32) / 2; // Header 32bits, SideInfo 256bits(dual)/136bits(mono)
     LOG(`Granule平均长度：${meanBitsPerGranule} bits`);
 
-    // 每个Channel的平均长度（bits）
-    let meanBitsPerChannel = meanBitsPerGranule / CHANNELS;
-    LOG(`Channel平均长度：${meanBitsPerChannel} bits`);
-
     // 设置比特储备的最大容量
     SetReservoirMax(frameLength);
-    LOG(`最大比特储备：${RESERVOIR_MAX} bits`);
 
     LOG(`【Granule 0】`);
     let granule0 = EncodeGranule(PCMs, offset, meanBitsPerGranule);
     LOG(`【Granule 1】`);
-    let granule1 = EncodeGranule(PCMs, offset + GRANULE_LENGTH, meanBitsPerGranule);
+    let granule1 = EncodeGranule(PCMs, offset + 576, meanBitsPerGranule);
 
     // 检查比特储备池的容量，使用多余的比特对granule作填充
     RegulateAndStuff([granule0, granule1]);
@@ -206,11 +183,14 @@ function EncodeChannel(PCM, offset, meanBitsPerChannel, buffer) {
     //  分 析 子 带 滤 波
     //////////////////////////////////
 
+
     let subbands = AnalysisSubbandFilter(PCM, offset);
 
+
     //////////////////////////////////
-    //  心 理 声 学 模 型（ 待 实 现 ）
+    //  心 理 声 学 模 型
     //////////////////////////////////
+
 
     let isAttack = false; //(Math.random() > 0.95) ? true : false;
     let perceptualEntropy = 0;
@@ -221,17 +201,19 @@ function EncodeChannel(PCM, offset, meanBitsPerChannel, buffer) {
         xmin[i] = 1e-12;
     }
 
+
     //////////////////////////////////
     //  时 频 变 换
     //////////////////////////////////
 
+
     let Spectrum = CalculateGranuleSpectrum(subbands, buffer.PREV_SUBBANDS, blockType); // TODO
 
-    // TODO 判断是否是全0的频谱
 
     //////////////////////////////////
     //  分 配 比 特 预 算
     //////////////////////////////////
+
 
     LOG(`当前比特储备：${RESERVOIR_SIZE}`);
     let budget = AllocateBudget(perceptualEntropy, meanBitsPerChannel);
@@ -239,36 +221,26 @@ function EncodeChannel(PCM, offset, meanBitsPerChannel, buffer) {
     let huffmanBudget = budget - ((blockType !== WINDOW_SHORT) ? 74 : 126); // 假设尺度因子全满的情况下，扣除尺度因子所使用的比特，剩余的预算分配给part3（哈夫曼编码）
     LOG(`当前Channel分配的比特预算（only part3）= ${huffmanBudget} bits`);
 
+
     //////////////////////////////////
     //  量 化 循 环
     //////////////////////////////////
 
+
     let outerLoopOutput = OuterLoop(Spectrum, blockType, huffmanBudget, xmin);
 
-    //////////////////////////////////
-    //  计 算 尺 度 因 子 长 度
-    //////////////////////////////////
-
-    let part2Length = 0;
-    let scalefactorCompress = CalculateScalefactorCompress(outerLoopOutput.scalefactors, blockType);
-        let slens = SF_COMPRESS_INDEX[scalefactorCompress];
-    if(blockType !== WINDOW_SHORT) {
-        part2Length = 11 * slens[0] + 10 * slens[1];
-    }
-    else if(blockType === WINDOW_SHORT) {
-        part2Length = (6 * slens[0] + 6 * slens[1]) * 3;
-    }
 
     //////////////////////////////////
     //  构 造 编 码 结 果
     //////////////////////////////////
 
+
     let channel = {
-        "part23Length": part2Length + outerLoopOutput.huffman.codeString.length,
+        "part23Length": outerLoopOutput.part23Length,
         "bigvalues": outerLoopOutput.huffman.bigvalues,
         "globalGain": outerLoopOutput.globalGain,
-        "scalefactorCompress": scalefactorCompress,
-        "windowSwitchingFlag": (blockType === WINDOW_NORMAL) ? 0 : 1,
+        "scalefactorCompress": outerLoopOutput.scalefactorCompress,
+        "windowSwitchingFlag": (blockType === WINDOW_NORMAL) ? "0" : "1",
         "blockType": blockType,
 
         "tableSelect": outerLoopOutput.huffman.bigvalueTableSelect,
@@ -284,28 +256,23 @@ function EncodeChannel(PCM, offset, meanBitsPerChannel, buffer) {
     };
 
 
-    LOG(`    ★ Part23Length：${channel.part23Length}`);
-    LOG(`    ★ GlobalGain：${channel.globalGain}`);
-    LOG(`    ★ 量化步数：${outerLoopOutput.qquant}`);
-    if(channel.blockType === WINDOW_SHORT) {
-        LOG(`    ★ 尺度因子(短块0)：${channel.scalefactors[0]}`);
-        LOG(`    ★ 尺度因子(短块1)：${channel.scalefactors[1]}`);
-        LOG(`    ★ 尺度因子(短块2)：${channel.scalefactors[2]}`);
-    }
-    else {
-        LOG(`    ★ 尺度因子：${channel.scalefactors}`);
-    }
-    LOG(channel);
+    //////////////////////////////////
+    //  返 还 剩 余 比 特
+    //////////////////////////////////
 
-    // 返还剩余比特
+
     ReturnUnusedBits(channel.part23Length, meanBitsPerChannel);
+
 
     //////////////////////////////////
     //  保 存 前 一 granule 结 果
     //////////////////////////////////
 
+
     buffer.PREV_SUBBANDS = subbands;
     buffer.PREV_BLOCK_TYPE = blockType;
 
+
     return channel;
+
 }
