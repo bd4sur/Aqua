@@ -3,17 +3,19 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0">
-    <title>MPEG-1 Audio Layer 3 Encoder</title>
+    <title>Aquarius MP3 Encoder</title>
     <link rel="stylesheet" type="text/css" href="./style/style.css" charset="utf-8"/>
 </head>
 <body>
 <div class="Main">
     <div class="Title">
-        MPEG-1 Audio Layer Ⅲ 编码器 原理验证原型 <span style="padding-left: 10px; font-size: 15px; color: #cecece;">Pre-alpha</span>
+        <p style="text-align: center; line-height: 10px;"><img src="./documentation/logo-small.png" width="100"></p>
+        <p style="text-align: center; line-height: 10px; font-size: 22px;">Aquarius MP3 Encoder</p>
+        <p style="text-align: center; line-height: 10px;"><span style="padding-left: 10px; font-size: 15px; color: #cecece;">原理验证原型</span></p>
     </div>
 
     <div class="Block" style="text-align: center;">
-        <div style="text-align: left; line-height: 23px; color:#666;">
+        <div style="line-height: 23px; color:#666;">
             打开控制台以查看详细输出信息。
         </div>
 
@@ -21,8 +23,8 @@
             输入原始文件（格式不限）：<input type="file" id="fileSelector" name="files[]" multiple>
         </div>
 
-        <div style="text-align: left; margin: 20px 0;">
-            <button id="play" data-state="stopped"><span id="playLabel">开始编码</span></button>
+        <div style="margin: 20px 0;">
+            <button id="play" data-state="stopped" style="width: 30%;"><span id="playLabel">开始编码</span></button>
         </div>
         <div class="ProcessbarContainer">
             <div id="progressbar" style="height: 100%; background-color: #00aaff; width: 5px;"></div>
@@ -35,7 +37,7 @@
 
     </div>
 
-    <div style="font-size: 13px; color:#888888; margin: 20px auto; line-height: 20px;">
+    <div style="text-align: center; font-size: 13px; color:#888888; margin: 20px auto; line-height: 20px;">
         <div><a href="https://github.com/mikukonai/MP3-Study"><img alt="GitHub stars" src="https://img.shields.io/github/stars/mikukonai/MP3-Study?style=social"></a></div>
         <div>Copyright &copy; 2019-2020 Mikukonai</div>
     </div>

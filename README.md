@@ -1,6 +1,7 @@
-# MP3-Study
 
-An MP3 audio encoder / MP3音频编码器
+<p align="center"><img src="./documentation/logo.png" width="400"></p>
+
+<h1 align="center">Aquarius MP3 Encoder</h1>
 
 ## 介绍
 
@@ -43,6 +44,7 @@ MP3编码器学习、研究、开发项目。目标是实现可用的 MPEG-1 Aud
 |2020.01.05|实现比特流组装|
 |2020.01.07|输出第一个合式MP3文件|
 |**2020.01.15**|修正若干重大错误，尝试编码若干个完整的音乐文件，效果不错|
+|2020.01.19|项目定名“Aquarius”并设计图标|
 |进行中|实现第二心理声学模型|
 |进行中|实现外层循环的预加重环节|
 |进行中|给项目起个好听的名字（|
