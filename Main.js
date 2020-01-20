@@ -1,58 +1,12 @@
 
-let ENCODER_TIMER;
 
-let AudioContext = new window.AudioContext();
 
-let rawAudioData;
 
-let fileSelector = document.getElementById('fileSelector');
-fileSelector.onchange = () => {
-    let file = fileSelector.files[0];
-    let Reader = new FileReader();
-    Reader.onloadend = () => {
-        rawAudioData = Reader.result;
-    }
-    Reader.readAsArrayBuffer(file);
-};
-
-function Render(rawAudioData) {
-    AudioContext.decodeAudioData(rawAudioData, (audioBuffer) => {
-        // 获取两个声道的原始数据
-        let SampleRate = audioBuffer.sampleRate;
-        let leftChannel  = audioBuffer.getChannelData(0);
-        let rightChannel = audioBuffer.getChannelData(1);
-
-        let AudioBufferSourceNode = AudioContext.createBufferSource();
-        AudioBufferSourceNode.connect(AudioContext.destination);
-        AudioBufferSourceNode.buffer = audioBuffer;
-        AudioBufferSourceNode.start(0);
-
-        // 采样率
-        if(SampleRate === 44100) { SAMPLE_RATE = SAMPLE_RATE_44100; }
-        else if(SampleRate === 48000) { SAMPLE_RATE = SAMPLE_RATE_48000; }
-        else if(SampleRate === 32000) { SAMPLE_RATE = SAMPLE_RATE_32000; }
-        else {
-            console.warn(`MPEG-1 不支持采样率 ${SampleRate}Hz，默认采用 44100Hz`);
-            SAMPLE_RATE = SAMPLE_RATE_44100;
-        }
-
-        MPEG(leftChannel, rightChannel);
-
-    });
-}
-
-$("#play").click(() => {
-    let state = $("#play").attr("data-state");
-    if(state === "stopped") {
-        $("#playLabel").html("暂停");
-        Render(rawAudioData);
-        $("#play").attr("data-state", "playing");
-    }
-});
-
-/**
- * 编码器的全局缓存（可优化）
- */
+/////////////////////////////////////////////////////////////////
+//
+//  全 局 缓 存 （ 含 心 理 声 学 模 型 缓 存 ）
+//
+/////////////////////////////////////////////////////////////////
 
 let BUFFER = new Array();
 
@@ -70,11 +24,18 @@ for(let ch = 0; ch < CHANNELS; ch++) {
     };
 }
 
-let STREAM = new Array(); // 字节流
+/////////////////////////////////////////////////////////////////
+//
+//  编 码 器 入 口
+//
+/////////////////////////////////////////////////////////////////
 
-let frameCount = 0;
+function AquariusMp3Encoder(PCM_left, PCM_right) {
 
-function MPEG(PCM_left, PCM_right) {
+    let STREAM = new Array(); // 字节流
+    let frameCount = 0;
+
+    let ENCODER_TIMER; // 帧时钟（使用setInterval实现帧循环，避免阻塞）
 
     // 心理声学模型初始化
     PAM2_Init();

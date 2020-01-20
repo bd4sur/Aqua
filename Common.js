@@ -1,6 +1,36 @@
-/**
- * @description 在网页上输出
- */
+
+/////////////////////////////////////////////////////////////////
+//
+//  编 码 器 全 局 参 数 （需要放在模块依赖链条的最前面）
+//
+//     说明：这些参数耦合在现有代码各处，有待优化。
+//
+/////////////////////////////////////////////////////////////////
+
+// 采样率（枚举值）
+const SAMPLE_RATE_32000 = 0;
+const SAMPLE_RATE_44100 = 1;
+const SAMPLE_RATE_48000 = 2;
+
+let SAMPLE_RATE = SAMPLE_RATE_44100;
+
+// 比特率（枚举值）
+const BIT_RATE_64K  = 0;
+const BIT_RATE_128K = 1;
+const BIT_RATE_224K = 2;
+const BIT_RATE_320K = 3;
+
+let BIT_RATE = BIT_RATE_320K;
+
+// 声道数（最大设为2）
+let CHANNELS = 2;
+
+/////////////////////////////////////////////////////////////////
+//
+//  工 具 函 数
+//
+/////////////////////////////////////////////////////////////////
+
 function LOG(x) {
     // console.log(x);
     // if(typeof x === "object") {
@@ -11,26 +41,22 @@ function LOG(x) {
 }
 
 
-/**
- * @description 返回某正整数的指定长度的二进制串
- */
+// 返回某正整数的指定长度的二进制串
 function BinaryString(intNumber, length) {
     if(intNumber > ((1 << length) - 1)) {
         // debugger;
         throw "range error"; // TODO 供测试
     }
-    let seq = [];
+    let seq = "";
     for(let i = 0; i < length; i++) {
-        if((intNumber & 1) > 0) seq.unshift("1");
-        else seq.unshift("0");
+        if((intNumber & 1) > 0) seq = "1" + seq;
+        else seq = "0" + seq;
         intNumber = intNumber >> 1;
     }
-    return seq.join("");
+    return seq;
 }
 
-/**
- * @description 二进制串转无符号整数
- */
+// 二进制串转无符号整数
 function BinaryStringToUint(bstr) {
     let sum = 0;
     for(let i = bstr.length; i>= 0; i--) {
@@ -42,29 +68,17 @@ function BinaryStringToUint(bstr) {
 }
 
 
-///////////////////////////////////
+/////////////////////////////////////////////////////////////////
 //
 //  常 数 和 表 格
 //
-///////////////////////////////////
+/////////////////////////////////////////////////////////////////
 
-const BIT_RATE_VALUE = [64000, 128000, 224000, 320000]; // 作为原理验证，仅支持4种码率
-
+const BIT_RATE_VALUE   = [64000, 128000, 224000, 320000];
 const BIT_RATE_BINCODE = ["0101", "1001", "1100", "1110"];
 
-const BIT_RATE_64K  = 0;
-const BIT_RATE_128K = 1;
-const BIT_RATE_224K = 2;
-const BIT_RATE_320K = 3;
-
-const SAMPLE_RATE_VALUE = [32000, 44100, 48000];
-
+const SAMPLE_RATE_VALUE   = [32000, 44100, 48000];
 const SAMPLE_RATE_BINCODE = ["10", "00", "01"];
-
-// 用于表格索引
-const SAMPLE_RATE_32000 = 0;
-const SAMPLE_RATE_44100 = 1;
-const SAMPLE_RATE_48000 = 2;
 
 // 用于表格索引
 const LONG_BLOCK  = 0;

@@ -50,7 +50,15 @@ function Quantize(xr576, quantStep) {
     let ix576 = new Array();
     for(let i = 0; i < 576; i++) {
         let xr = xr576[i];
-        ix576[i] = Math.sign(xr) * ((xr === 0) ? 0 : (Math.round(Math.pow((Math.abs(xr) / Math.pow(ROOT_2_4, quantStep)), 0.75) - 0.0946)));
+        if(xr === 0) {
+            ix576[i] = 0;
+        }
+        else if(xr > 0) {
+            ix576[i] = Math.round(Math.pow((xr / Math.pow(ROOT_2_4, quantStep)), 0.75) - 0.0946);
+        }
+        else {
+            ix576[i] = -Math.round(Math.pow(((-xr) / Math.pow(ROOT_2_4, quantStep)), 0.75) - 0.0946);
+        }
     }
     return ix576;
 }
