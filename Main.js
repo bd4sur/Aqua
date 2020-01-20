@@ -72,7 +72,11 @@ function AquariusMp3Encoder(PCM_left, PCM_right) {
 
         let frameStream = FormatFrameBitStream(frame, isPadding, mainDataBegin);
 
-        STREAM = STREAM.concat(frameStream);
+        // STREAM = STREAM.concat(frameStream);
+        // 将当前帧的比特流追加到现有比特流后面
+        for(let i = 0; i < frameStream.length; i++) {
+            STREAM.push(frameStream[i]);
+        }
 
         let endTime = Date.now();
 
