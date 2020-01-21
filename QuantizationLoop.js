@@ -1,9 +1,4 @@
 
-/**
- * @description 2的4次根号
- */
-const ROOT_2_4 = 1.189207115002721;
-
 
 /**
  * @description 频谱平坦度，用于计算量化步长初值
@@ -34,7 +29,7 @@ function CalculateQuantNoise(xr, ix, quantStep, blockType) {
     for(let sbindex = 0; sbindex < SFB.length; sbindex++) {
         let sum = 0;
         for(let i = SFB[sbindex][0]; i <= SFB[sbindex][1]; i++) {
-            let temp1 = (ix[i] === 0) ? Math.abs(xr[i]) : (Math.abs(xr[i]) - Math.pow(Math.abs(ix[i]), (4/3)) * Math.pow(ROOT_2_4, quantStep)); // NOTE 与标准原文的差异：给ix[i]加了绝对值
+            let temp1 = (ix[i] === 0) ? Math.abs(xr[i]) : (Math.abs(xr[i]) - Math.pow(Math.abs(ix[i]), (4/3)) * POWER_OF_ROOT_2_4[quantStep + 256]); // NOTE 与标准原文的差异：给ix[i]加了绝对值
             sum += (temp1 * temp1);
         }
         xfsf[sbindex] = sum / (SFB[sbindex][1] - SFB[sbindex][0] + 1); // NOTE 此处dist10与IS有出入，以dist10为准。
@@ -54,10 +49,10 @@ function Quantize(xr576, quantStep) {
             ix576[i] = 0;
         }
         else if(xr > 0) {
-            ix576[i] = Math.round(Math.pow((xr / Math.pow(ROOT_2_4, quantStep)), 0.75) - 0.0946);
+            ix576[i] = Math.round(Math.pow((xr * INV_POWER_OF_ROOT_2_4[quantStep + 256]), 0.75) - 0.0946);
         }
         else {
-            ix576[i] = -Math.round(Math.pow(((-xr) / Math.pow(ROOT_2_4, quantStep)), 0.75) - 0.0946);
+            ix576[i] = -Math.round(Math.pow(((-xr) * INV_POWER_OF_ROOT_2_4[quantStep + 256]), 0.75) - 0.0946);
         }
     }
     return ix576;
@@ -171,6 +166,9 @@ function InnerLoop(Spectrum, blockType, bitRateLimit) {
     let globalGain;
     let huffman;
     let quantizedSpectrum576;
+
+    let initLength = -1;
+
     for(let qquant = 0; qquant < 256; qquant++) { // global_gain为8bit
         let quantanf;
         // 长块
@@ -193,7 +191,21 @@ function InnerLoop(Spectrum, blockType, bitRateLimit) {
 
         // 哈夫曼编码
         huffman = HuffmanEncode(quantizedSpectrum576, blockType);
-
+/*
+        // 以下代码的目的是尽可能减少迭代次数 TODO 这里的可靠性还需要进一步验证
+        if(huffman !== null) {
+            if(initLength < 0) initLength = huffman.codeString.length;
+            let gone = initLength - huffman.codeString.length;    // 已经缩减的比特数
+            let togo = huffman.codeString.length - bitRateLimit;  // 距离目标比特数还剩多少
+            // 以下的分界点和加速步长都可以调整
+            if(gone < togo) {
+                qquant += 4;
+            }
+            else if(gone < 3 * togo) {
+                qquant += 2;
+            }
+        }
+*/
         // 满足条件退出
         if(huffman !== null && huffman.codeString.length < bitRateLimit) {
             if(huffman.codeString.length === 0) globalGain = 0; // 静音情况

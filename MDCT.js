@@ -85,11 +85,11 @@ function WindowStop(i) {
  */
 function MDCT(input, length) {
     let output = new Array();
+    let MDCT_FACTOR = (length === 12) ? MDCT_FACTOR_12 : MDCT_FACTOR_36;
     for(let i = 0; i < (length / 2); i++) {
         let sum = 0;
         for(let k = 0; k < length; k++) {
-            let temp = Math.PI * (2 * k + 1 + length / 2) * (2 * i + 1) / (2 * length);
-            sum += input[k] * Math.cos(temp);
+            sum += input[k] * MDCT_FACTOR[i * length + k];
         }
         output[i] = sum;
     }
