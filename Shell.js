@@ -1,4 +1,9 @@
 
+let cv = new Canvas("osc", [0,0], [576, 200]);
+
+cv.Init();
+cv.SetBackgroundColor("#000");
+
 let AudioContext = new window.AudioContext();
 
 let rawAudioData;

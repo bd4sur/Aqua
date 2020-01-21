@@ -175,7 +175,9 @@ function InnerLoop(Spectrum, blockType, bitRateLimit) {
         if(blockType !== WINDOW_SHORT) {
             // 量化
             let LongBlockSpectrum576 = Spectrum[0];
-            quantanf = Math.round(8 * Math.log(SFM(LongBlockSpectrum576)));
+            // NOTE 下一行中，dist10是减去70。试验结果显示，对于某些测试用例（如 Zwei!! OST 的《おやすみ》），减去70的确可以防止小能量帧出现奇怪的噪声。
+            //      但是这里考虑到性能，采取了一个较小的值30。下同。
+            quantanf = Math.round(8 * Math.log(SFM(LongBlockSpectrum576))) - 30;
             quantizedSpectrum576 = Quantize(LongBlockSpectrum576, (quantanf + qquant));
             globalGain = quantanf + qquant + 210;
         }
@@ -184,28 +186,28 @@ function InnerLoop(Spectrum, blockType, bitRateLimit) {
             // 将短块频谱重排成连续的576点频谱，并对其量化
             // NOTE 参考dist10，所有子块是同时量化的
             let ShortBlockSpectrum576 = MuxShortBlockSpectrum(Spectrum);
-            quantanf = Math.round(8 * Math.log(SFM(ShortBlockSpectrum576)));
+            quantanf = Math.round(8 * Math.log(SFM(ShortBlockSpectrum576))) - 30;
             quantizedSpectrum576 = Quantize(ShortBlockSpectrum576, (quantanf + qquant));
             globalGain = quantanf + qquant + 210;
         }
 
         // 哈夫曼编码
         huffman = HuffmanEncode(quantizedSpectrum576, blockType);
-/*
+
         // 以下代码的目的是尽可能减少迭代次数 TODO 这里的可靠性还需要进一步验证
         if(huffman !== null) {
             if(initLength < 0) initLength = huffman.codeString.length;
             let gone = initLength - huffman.codeString.length;    // 已经缩减的比特数
             let togo = huffman.codeString.length - bitRateLimit;  // 距离目标比特数还剩多少
             // 以下的分界点和加速步长都可以调整
-            if(gone < togo) {
+            if(gone < 2 * togo) {
                 qquant += 4;
             }
-            else if(gone < 3 * togo) {
+            else if(gone < 4 * togo) {
                 qquant += 2;
             }
         }
-*/
+
         // 满足条件退出
         if(huffman !== null && huffman.codeString.length < bitRateLimit) {
             if(huffman.codeString.length === 0) globalGain = 0; // 静音情况

@@ -88,6 +88,14 @@ function AquariusMp3Encoder(PCM_left, PCM_right) {
         $("#timer").html(`${frameCount} / ${frameNumber} (${(frameCount / frameNumber * 100).toFixed(2)}%) (${speed}x)`);
         $("#progressbar").css("width", `${(frameCount / frameNumber * 100).toFixed(2)}%`);
 
+        // 绘制576点频谱
+        cv.Clear();
+        cv.SetBackgroundColor("#000");
+        let spect = frame[0][0].spectrum;
+        for(let x = 0; x < 576; x++) {
+            cv.Line([x, 0], [x, spect[x]], "#6f6");
+        }
+
         LOG(`=============================================================`);
         frameCount++;
         offset += 1152;
@@ -216,7 +224,9 @@ function EncodeChannel(PCM, offset, meanBitsPerChannel, buffer) {
         // Part 2
         "scalefactors": outerLoopOutput.scalefactors,
         // Part 3
-        "huffmanCodeBits": outerLoopOutput.huffman.codeString
+        "huffmanCodeBits": outerLoopOutput.huffman.codeString,
+
+        "spectrum": outerLoopOutput.quantizedSpectrum576
     };
 
 
