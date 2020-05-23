@@ -2,7 +2,7 @@
 let cv = new Canvas("osc", [0,0], [576, 200]);
 
 cv.Init();
-cv.SetBackgroundColor("#000");
+cv.SetBackgroundColor("#fff");
 
 let AudioContext = new window.AudioContext();
 
@@ -40,7 +40,7 @@ function Render(rawAudioData) {
         }
 
         // 编码器入口
-        AquariusMp3Encoder(leftChannel, rightChannel);
+        Aqua_MP3_Encoder(leftChannel, rightChannel);
 
     });
 }

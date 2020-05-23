@@ -3,14 +3,24 @@ body {
     padding: 0;
 }
 .Title {
-    font-size: 18px; margin: 20px 0; color: #222; font-weight: bold; line-height: 40px;
+    padding: 30px 40px 20px 40px;
 }
+
+.TitleBorder {
+    display: block;
+    height: 2px;
+    border: none;
+    background: linear-gradient(90deg, #ade8fdcc, #cfffdfcc);
+}
+
 @media(min-width:651px) { /* Desktop */
     .Main {
         width: 60%;
         max-width: 800px;
         margin: 50px auto;
         font-size: 14px;
+        border-radius: 20px;
+        box-shadow: 0 0px #e5e5e5, 0 0 15px rgba(0,0,0,0.12), 0 2px 4px rgba(0,0,0,0.05);
     }
 }
 @media(max-width:650px) { /* Mobile */
@@ -22,27 +32,36 @@ body {
 
 
 .Block {
-    /* border-radius: 10px; */
-    /* box-shadow: 0 2px 2px 0 rgba(64,64,64,0.1), 0 1px 3px 1px rgba(64,64,64,0.3); */
-    margin: 10px 0;
+    padding: 0 40px;
+    margin: 40px 0;
 }
+
+.Footer {
+    padding: 20px 0;
+    background: linear-gradient(180deg, white, #fafafa);
+    border-radius: 0 0 20px 20px;
+}
+
+.Copyright {
+    font-size: 12px; text-align: center; line-height: 25px; color: #ccc;
+}
+
 canvas {
     display: block;
-    margin: 20px auto;
     width: 100%;
 }
-table {
-    font-size: 14px;
-    margin: 20px auto;
-}
+
 .InfoLeft  { text-align: right; font-weight: bold; }
 .InfoRight { text-align: left; }
 
 .ProcessbarContainer {
     position: relative;
     width: 100%;
-    border: 1px solid #00aaff;
-    height: 25px;
+    /* border: 1px solid #00aaff; */
+    background-color: #eee;
+    border-radius: 100px;
+    height: 5px;
+    overflow: hidden;
 }
 
 a {

@@ -30,7 +30,7 @@ for(let ch = 0; ch < CHANNELS; ch++) {
 //
 /////////////////////////////////////////////////////////////////
 
-function AquariusMp3Encoder(PCM_left, PCM_right) {
+function Aqua_MP3_Encoder(PCM_left, PCM_right) {
 
     let STREAM = new Array(); // 字节流
     let frameCount = 0;
@@ -90,10 +90,10 @@ function AquariusMp3Encoder(PCM_left, PCM_right) {
 
         // 绘制576点频谱
         cv.Clear();
-        cv.SetBackgroundColor("#000");
+        cv.SetBackgroundColor("#fff");
         let spect = frame[0][0].spectrum;
         for(let x = 0; x < 576; x++) {
-            cv.Line([x, 0], [x, spect[x]], "#6f6");
+            cv.Line([x, 0], [x, spect[x]], "#0af");
         }
 
         LOG(`=============================================================`);

@@ -1,7 +1,7 @@
 
-<p align="center"><img src="./documentation/logo.png" width="400"></p>
+<p align="center"><img src="./documentation/logo.png" width="300"></p>
 
-<h1 align="center">Aquarius MP3 Encoder</h1>
+<h1 align="center">Project Aqua</h1>
 
 ## 介绍
 
@@ -45,9 +45,9 @@ MP3编码器学习、研究、开发项目。目标是实现可用的 MPEG-1 Aud
 |2020.01.07|输出第一个合式MP3文件|
 |**2020.01.15**|修正若干重大错误，尝试编码若干个完整的音乐文件，效果不错|
 |2020.01.19|项目定名“Aquarius”并设计图标|
+|2020.05.23|项目更名“Aqua”|
 |进行中|实现第二心理声学模型|
 |进行中|实现外层循环的预加重环节|
-|进行中|给项目起个好听的名字（|
 |进行中|完善项目文档|
 |进行中|进一步测试，尽可能排除所有已知故障，处理掉所有TODO|
 |进行中|完成以上工作后，发布第一个基线版本（V0.1.0）|

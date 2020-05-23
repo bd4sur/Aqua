@@ -3,45 +3,52 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0">
-    <title>Aquarius MP3 Encoder</title>
+    <title>Project Aqua</title>
     <link rel="stylesheet" type="text/css" href="./style/style.css" charset="utf-8"/>
 </head>
 <body>
 <div class="Main">
     <div class="Title">
-        <p style="text-align: center; line-height: 10px;"><img src="./documentation/logo-small.png" width="100"></p>
-        <p style="text-align: center; line-height: 10px; font-size: 22px;">Aquarius MP3 Encoder</p>
-        <p style="text-align: center; line-height: 10px;"><span style="padding-left: 10px; font-size: 15px; color: #cecece;">原理验证原型</span></p>
+        <table style="border-collapse: collapse; border-spacing: 0;">
+            <tr>
+                <td><img src="./documentation/logo.png" width="180"></td>
+                <td style="font-size: 18px; font-weight: bold; color:#aaa;"> / MP3 Audio Encoder</td>
+            </tr>
+        </table>
     </div>
 
-    <div class="Block" style="text-align: center;">
-        <div style="line-height: 23px; color:#666;">
+    <div class="TitleBorder"></div>
+
+    <div class="Block">
+        <!-- <div style="line-height: 23px; color:#666;">
             打开控制台以查看详细输出信息。
+        </div> -->
+
+        <div style="text-align: left;">
+            <input type="file" id="fileSelector" name="files[]" multiple>
         </div>
 
-        <div style="text-align: left; margin: 10px 0; padding: 10px; border-radius: 5px; background: #f3f3f3; font-weight: bold;">
-            输入原始文件（格式不限）：<input type="file" id="fileSelector" name="files[]" multiple>
+        <div style="text-align: center;">
+            <button id="play" data-state="stopped"><span id="playLabel">开始编码</span></button>
         </div>
 
         <div style="margin: 20px 0;">
-            <button id="play" data-state="stopped" style="width: 30%;"><span id="playLabel">开始编码</span></button>
-        </div>
-        <div class="ProcessbarContainer">
-            <div id="progressbar" style="height: 100%; background-color: #00aaff; width: 5px;"></div>
-            <div id="timer" style="position: absolute; top: 0; left: 0; font-size: 14px; height: 15px; line-height: 15px; margin: 5px 10px;"></div>
+            <div id="timer" style="color: #888; font-size: 14px; line-height: 25px; font-family: 'consolas', Courier, monospace;">Ready</div>
+
+            <div class="ProcessbarContainer">
+                <div id="progressbar" style="height: 100%; background-color: #00aaff; width: 0px;"></div>
+            </div>
         </div>
 
-        <!-- <pre id="output" style="text-align: left; background-color: black; color:#eee; padding: 10px; border-radius: 10px; overflow-x: auto;"></pre> -->
-
-        <div class="Block">
+        <div class="Block" style="border: 1px solid #eee; border-radius: 10px;">
             <canvas id="osc" height="300px" width="1024px"></canvas>
         </div>
     </div>
 
-    <div style="text-align: center; font-size: 13px; color:#888888; margin: 20px auto; line-height: 20px;">
-        <div><a href="https://github.com/mikukonai/MP3-Study"><img alt="GitHub stars" src="https://img.shields.io/github/stars/mikukonai/MP3-Study?style=social"></a></div>
-        <div>Copyright &copy; 2019-2020 Mikukonai</div>
-    </div>
+    <footer class="Footer">
+        <div style="text-align: center;"><a style="border-bottom: none;" href="https://github.com/mikukonai/MP3-Study"><img alt="GitHub stars" src="https://img.shields.io/github/stars/mikukonai/MP3-Study?style=social"></a></div>
+        <div class="Copyright">&copy 2019-2020 Mikukonai</div>
+    </footer>
 
 </div>
 
