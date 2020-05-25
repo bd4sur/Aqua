@@ -9,38 +9,39 @@
 <body>
 <div class="Main">
     <div class="Title">
-        <table style="border-collapse: collapse; border-spacing: 0;">
+        <table style="display: inline-block; border-collapse: collapse; border-spacing: 0;">
             <tr>
                 <td><img src="./documentation/logo.png" width="150"></td>
-                <td style="font-size: 18px; font-weight: bold; color:#aaa;"> / MP3 Audio Encoder</td>
+                <td style="font-size: 18px; font-weight: bold; color:#ccc;"> / MP3 Encoder</td>
             </tr>
         </table>
+
+        <div style="float: right; right: 0; margin-top: 18px;">
+            <a style="border-bottom: none;" href="https://github.com/mikukonai/Aqua"><img alt="GitHub stars" src="https://img.shields.io/github/stars/mikukonai/Aqua?style=social"></a>
+        </div>
     </div>
 
-    <div class="TitleBorder"></div>
+    <!-- <div class="TitleBorder"></div> -->
 
     <div class="Block">
-        <!-- <div style="line-height: 23px; color:#666;">
-            打开控制台以查看详细输出信息。
-        </div> -->
 
-        <div style="text-align: left;">
-            <input type="file" id="fileSelector" name="files[]" multiple>
+        <div>
+            <div class="InputButton" id="inputButton">
+                <input type="file" id="fileSelector" name="files[]" multiple class="Input">
+                <span id="inputButtonLabel" class="InputButtonLabel">Open input file...</span>
+            </div>
         </div>
 
-        <div style="text-align: center;">
-            <button id="play" data-state="stopped"><span id="playLabel">开始编码</span></button>
+        <div style="text-align: center; margin: 15px 0;">
+            <button id="play" data-state="stopped"><span id="playLabel">Start</span></button>
         </div>
 
         <div style="margin: 20px 0;">
-            <div style="position: relative; color: #888; font-size: 14px; line-height: 25px; font-family: 'consolas', Courier, monospace;">
-                <div id="timer">Ready</div>
-                <div id="speed" style="display: inline-block; position: absolute; right: 0; top: 0;">-</div>
+            <div id="timer" style="color: #888; font-size: 14px; font-family: 'consolas', Courier, monospace;">Ready</div>
+            <div class="ProcessbarContainer" style="margin: 5px 0;">
+                <div id="progressbar" style="height: 100%; background-color: #66ccff; width: 0px;"></div>
             </div>
-
-            <div class="ProcessbarContainer">
-                <div id="progressbar" style="height: 100%; background-color: #00aaff; width: 0px;"></div>
-            </div>
+            <div id="speed" style="color: #888; font-size: 14px; font-family: 'consolas', Courier, monospace;">--</div>
         </div>
 
         <div class="Block" style="border: 1px solid #eee; border-radius: 10px;">
@@ -49,7 +50,7 @@
     </div>
 
     <footer class="Footer">
-        <div style="text-align: center;"><a style="border-bottom: none;" href="https://github.com/mikukonai/MP3-Study"><img alt="GitHub stars" src="https://img.shields.io/github/stars/mikukonai/MP3-Study?style=social"></a></div>
+        <div class="Copyright">Version: Not released</div>
         <div class="Copyright">&copy 2019-2020 Mikukonai</div>
     </footer>
 

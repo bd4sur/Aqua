@@ -30,7 +30,7 @@ for(let ch = 0; ch < CHANNELS; ch++) {
 //
 /////////////////////////////////////////////////////////////////
 
-function Aqua_MP3_Encoder(PCM_left, PCM_right) {
+function Aqua_MP3_Encoder(PCM_left, PCM_right, filename) {
 
     let STREAM = new Array(); // 字节流
     let frameCount = 0;
@@ -47,7 +47,7 @@ function Aqua_MP3_Encoder(PCM_left, PCM_right) {
     let offset = 0;
 
     ENCODER_TIMER = setInterval(() => {
-        console.log(`正在处理第 ${frameCount} / ${frameNumber} 帧`);
+        // console.log(`正在处理第 ${frameCount} / ${frameNumber} 帧`);
 
         let startTime = Date.now();
 
@@ -80,12 +80,9 @@ function Aqua_MP3_Encoder(PCM_left, PCM_right) {
         let endTime = Date.now();
 
         let duration = endTime - startTime;
-        let speed = ((1152 / SAMPLE_RATE_VALUE[SAMPLE_RATE] * 1000) / duration).toFixed(2);
+        let speed = ((1152 / SAMPLE_RATE_VALUE[SAMPLE_RATE] * 1000) / duration).toFixed(1);
 
-        console.log(`  耗时：${duration}ms`);
-        console.log(`  倍速：${speed}x`);
-
-        $("#timer").html(`${frameCount} / ${frameNumber} (${(frameCount / frameNumber * 100).toFixed(2)}%)`);
+        $("#timer").html(`${(frameCount / frameNumber * 100).toFixed(1)}% (${frameCount}/${frameNumber})`);
         $("#speed").html(`${speed}x`);
         $("#progressbar").css("width", `${(frameCount / frameNumber * 100).toFixed(2)}%`);
 
@@ -94,9 +91,8 @@ function Aqua_MP3_Encoder(PCM_left, PCM_right) {
         cv.SetBackgroundColor("#fff");
         let spect = frame[0][0].spectrum;
         let index = 0;
-        for(let x = 0; x < 576*2; x+=2) {
-            // cv.Line([x, 0], [x, spect[x]], "#0af");
-            cv.Rect([x, 0], 2, spect[index], "#0af");
+        for(let x = 0; x < 576; x++) {
+            cv.Line([x, 0], [x, spect[index]], "#0af");
             index++;
         }
 
@@ -112,7 +108,7 @@ function Aqua_MP3_Encoder(PCM_left, PCM_right) {
             console.log(STREAM);
             let buffer = new Uint8Array(STREAM);
             let file = new File([buffer], `test.mp3`, {type: `audio/mpeg`});
-            saveAs(file, `test.mp3`, true);
+            saveAs(file, `${filename}_Aqua.mp3`, true);
         }
     }, 0);
 }

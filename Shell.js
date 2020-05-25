@@ -1,5 +1,5 @@
 
-let cv = new Canvas("osc", [0,0], [1152, 200]); // 每个条带宽2px
+let cv = new Canvas("osc", [0,0], [576, 200]); // 每个条带宽2px
 
 cv.Init();
 cv.SetBackgroundColor("#fff");
@@ -7,6 +7,8 @@ cv.SetBackgroundColor("#fff");
 let AudioContext = new window.AudioContext();
 
 let rawAudioData;
+
+let filename = "";
 
 let fileSelector = document.getElementById('fileSelector');
 fileSelector.onchange = () => {
@@ -40,7 +42,7 @@ function Render(rawAudioData) {
         }
 
         // 编码器入口
-        Aqua_MP3_Encoder(leftChannel, rightChannel);
+        Aqua_MP3_Encoder(leftChannel, rightChannel, filename);
 
     });
 }
@@ -48,8 +50,14 @@ function Render(rawAudioData) {
 $("#play").click(() => {
     let state = $("#play").attr("data-state");
     if(state === "stopped") {
-        $("#playLabel").html("暂停");
+        $("#playLabel").html("Running...");
         Render(rawAudioData);
         $("#play").attr("data-state", "playing");
     }
+});
+
+$("#fileSelector").change(() => {
+    let fakepath = $("#fileSelector").val().split(/\\|\//gi);
+    filename = fakepath[fakepath.length - 1];
+    $("#inputButtonLabel").html(filename);
 });

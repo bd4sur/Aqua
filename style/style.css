@@ -37,7 +37,7 @@ body {
 
 .Block {
     padding: 0 40px;
-    margin: 40px 0;
+    margin: 20px 0;
 }
 
 .Footer {
@@ -48,6 +48,32 @@ body {
 
 .Copyright {
     font-size: 12px; text-align: center; line-height: 25px; color: #ccc;
+}
+
+.Input {
+    position: absolute;
+    top: 0; left: 0;
+    width: 100%; height: 50px;
+    opacity: 0;
+}
+
+.InputButton {
+    position: relative;
+    border: 1px dashed #ddd;
+    width: 100%; height: 50px;
+    line-height: 50px;
+    border-radius: 5px;
+    text-align: center;
+}
+
+.InputButton:hover {
+    background-color: #fafafa;
+}
+
+.InputButtonLabel {
+    color: #666;
+    font-size: 12px;
+    text-align: center;
 }
 
 canvas {
