@@ -91,7 +91,7 @@ function MDCT(input, length) {
         for(let k = 0; k < length; k++) {
             sum += input[k] * MDCT_FACTOR[i * length + k];
         }
-        output[i] = sum;
+        output[i] = sum / length * 4; // NOTE 20200525 保证长短块的频点尺度相同，否则会出现长短块电平不一致。乘以4的目的是将幅度调整到0.7~1附近（但仍需回放增益）
     }
     return output;
 }
@@ -188,7 +188,7 @@ function CalculateGranuleSpectrum(currentGranuleSubbands, prevGranuleSubbands, w
         for(let sbindex = 0; sbindex < 32; sbindex++) {
             let currentGranule = currentGranuleSubbands[sbindex];
             let prevGranule = prevGranuleSubbands[sbindex];
-            let frame = currentGranule.concat(prevGranule);
+            let frame = prevGranule.concat(currentGranule);
             // 处理三个按时间顺序排列的短块
             for(let shortBlockCount = 0; shortBlockCount < 3; shortBlockCount++) {
                 // 截取短块（长度为12）

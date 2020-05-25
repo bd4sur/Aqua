@@ -85,15 +85,19 @@ function Aqua_MP3_Encoder(PCM_left, PCM_right) {
         console.log(`  耗时：${duration}ms`);
         console.log(`  倍速：${speed}x`);
 
-        $("#timer").html(`${frameCount} / ${frameNumber} (${(frameCount / frameNumber * 100).toFixed(2)}%) (${speed}x)`);
+        $("#timer").html(`${frameCount} / ${frameNumber} (${(frameCount / frameNumber * 100).toFixed(2)}%)`);
+        $("#speed").html(`${speed}x`);
         $("#progressbar").css("width", `${(frameCount / frameNumber * 100).toFixed(2)}%`);
 
         // 绘制576点频谱
         cv.Clear();
         cv.SetBackgroundColor("#fff");
         let spect = frame[0][0].spectrum;
-        for(let x = 0; x < 576; x++) {
-            cv.Line([x, 0], [x, spect[x]], "#0af");
+        let index = 0;
+        for(let x = 0; x < 576*2; x+=2) {
+            // cv.Line([x, 0], [x, spect[x]], "#0af");
+            cv.Rect([x, 0], 2, spect[index], "#0af");
+            index++;
         }
 
         LOG(`=============================================================`);
@@ -164,7 +168,7 @@ function EncodeChannel(PCM, offset, meanBitsPerChannel, buffer) {
     //////////////////////////////////
 
 
-    let isAttack = false; //(Math.random() > 0.95) ? true : false;
+    let isAttack = (Math.random() > 0.9) ? true : false;
     let perceptualEntropy = 0;
     let blockType = SwitchWindowType(buffer.PREV_BLOCK_TYPE, isAttack);
     LOG(`窗口类型：${blockType}`);

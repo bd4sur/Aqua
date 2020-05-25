@@ -1,5 +1,5 @@
 
-let cv = new Canvas("osc", [0,0], [576, 200]);
+let cv = new Canvas("osc", [0,0], [1152, 200]); // 每个条带宽2px
 
 cv.Init();
 cv.SetBackgroundColor("#fff");

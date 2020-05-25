@@ -11,7 +11,7 @@
     <div class="Title">
         <table style="border-collapse: collapse; border-spacing: 0;">
             <tr>
-                <td><img src="./documentation/logo.png" width="180"></td>
+                <td><img src="./documentation/logo.png" width="150"></td>
                 <td style="font-size: 18px; font-weight: bold; color:#aaa;"> / MP3 Audio Encoder</td>
             </tr>
         </table>
@@ -33,7 +33,10 @@
         </div>
 
         <div style="margin: 20px 0;">
-            <div id="timer" style="color: #888; font-size: 14px; line-height: 25px; font-family: 'consolas', Courier, monospace;">Ready</div>
+            <div style="position: relative; color: #888; font-size: 14px; line-height: 25px; font-family: 'consolas', Courier, monospace;">
+                <div id="timer">Ready</div>
+                <div id="speed" style="display: inline-block; position: absolute; right: 0; top: 0;">-</div>
+            </div>
 
             <div class="ProcessbarContainer">
                 <div id="progressbar" style="height: 100%; background-color: #00aaff; width: 0px;"></div>
@@ -41,7 +44,7 @@
         </div>
 
         <div class="Block" style="border: 1px solid #eee; border-radius: 10px;">
-            <canvas id="osc" height="300px" width="1024px"></canvas>
+            <canvas id="osc" height="240px" width="1152px"></canvas>
         </div>
     </div>
 

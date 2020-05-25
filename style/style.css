@@ -1,3 +1,7 @@
+* {
+    outline: none;
+}
+
 body {
     margin: 0;
     padding: 0;
@@ -10,7 +14,7 @@ body {
     display: block;
     height: 2px;
     border: none;
-    background: linear-gradient(90deg, #ade8fdcc, #cfffdfcc);
+    background: linear-gradient(90deg, #ade8fd88, #fff);
 }
 
 @media(min-width:651px) { /* Desktop */
