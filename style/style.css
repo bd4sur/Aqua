@@ -20,7 +20,7 @@ body {
 @media(min-width:651px) { /* Desktop */
     .Main {
         width: 60%;
-        max-width: 800px;
+        max-width: 600px;
         margin: 50px auto;
         font-size: 14px;
         border-radius: 20px;
@@ -53,32 +53,37 @@ body {
 .Input {
     position: absolute;
     top: 0; left: 0;
-    width: 100%; height: 50px;
+    width: 100%; height: 100px;
     opacity: 0;
 }
 
 .InputButton {
     position: relative;
     border: 1px dashed #ddd;
-    width: 100%; height: 50px;
-    line-height: 50px;
+    width: 100%; height: 100px;
+    line-height: 100px;
     border-radius: 5px;
     text-align: center;
 }
 
 .InputButton:hover {
-    background-color: #fafafa;
+    background-color: #00000005;
 }
 
 .InputButtonLabel {
+    width: 100%;
     color: #666;
     font-size: 12px;
     text-align: center;
 }
 
-canvas {
+.Osc {
     display: block;
+    height: 100px;
     width: 100%;
+    position: absolute;
+    top: 0; left: 0;
+    z-index: -1;
 }
 
 .InfoLeft  { text-align: right; font-weight: bold; }
@@ -86,12 +91,27 @@ canvas {
 
 .ProcessbarContainer {
     position: relative;
+    padding: 0; 
     width: 100%;
-    /* border: 1px solid #00aaff; */
+    margin: 0 auto;
     background-color: #eee;
+    border: none;
     border-radius: 100px;
     height: 5px;
     overflow: hidden;
+}
+
+.Done {
+    background-color: #6bdd00;
+    cursor: pointer;
+}
+.Done:hover {
+    background-color: #5dbe02;
+    cursor: pointer;
+}
+
+.Timer {
+    color: #888; font-size: 14px; font-family: 'consolas', Courier, monospace;
 }
 
 a {
@@ -105,9 +125,14 @@ a:hover{
     border-bottom: 1px solid #0066dd;
 }
 
-button {
+.PlayButton {
+    width: fit-content;
+    margin: 0 auto;
+    text-align: center;
     height:30px; line-height: 30px; font-size: 14px; border: none; border-radius: 5px;
-    color: #00aaff; border: 1px solid #e1f5ff; background-color: #e1f5ff; padding: 0 10px; }
-button:hover { color: #00aaff; background-color: #cdeeff; border: 1px solid #cdeeff; }
-button:active { color: #ffffff; background-color: #40bfff; border: 1px solid #40bfff; }
-button:disabled { color: #888888; background-color: #eeeeee; border: 1px solid #eeeeee; }
+    color: #00aaff; background-color: #e1f5ff; padding: 0;
+    cursor: pointer;
+}
+.PlayButton:hover { color: #00aaff; background-color: #cdeeff;}
+.PlayButton:active { color: #ffffff; background-color: #40bfff;}
+.PlayButton:disabled { color: #888888; background-color: #eeeeee;}

@@ -1,5 +1,5 @@
 
-let cv = new Canvas("osc", [0,0], [576, 200]); // 每个条带宽2px
+let cv = new Canvas("osc", [0,-1], [1152, 1]);
 
 cv.Init();
 cv.SetBackgroundColor("#fff");
@@ -48,11 +48,24 @@ function Render(rawAudioData) {
 }
 
 $("#play").click(() => {
+    if(filename.length <= 0) {
+        alert("请选择文件");
+        return;
+    }
     let state = $("#play").attr("data-state");
     if(state === "stopped") {
-        $("#playLabel").html("Running...");
-        Render(rawAudioData);
-        $("#play").attr("data-state", "playing");
+        $("#play").animate({"width": "100%"}, 200, () => {
+            $("#playButtonLabel").remove();
+            $("#play").animate({"height": "5px"}, 300, () => {
+
+                $("#play").removeClass("PlayButton");
+                $("#play").addClass("ProcessbarContainer");
+
+                Render(rawAudioData);
+                $("#play").attr("data-state", "playing");
+
+            });
+        });
     }
 });
 

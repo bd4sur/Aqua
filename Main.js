@@ -89,10 +89,20 @@ function Aqua_MP3_Encoder(PCM_left, PCM_right, filename) {
         // 绘制576点频谱
         cv.Clear();
         cv.SetBackgroundColor("#fff");
-        let spect = frame[0][0].spectrum;
+
+        // 频谱
+        // let spect = frame[0][0].spectrum;
+        // let index = 0;
+        // for(let x = 0; x < 576; x++) {
+        //     cv.Line([x, 0], [x, spect[index]], "#0af");
+        //     index++;
+        // }
+
+        // 波形
+        let window = PCM_left.slice(offset, offset + 1152);
         let index = 0;
-        for(let x = 0; x < 576; x++) {
-            cv.Line([x, 0], [x, spect[index]], "#0af");
+        for(let x = 1; x < 1152; x++) {
+            cv.Line([x-1, window[index-1]], [x, window[index]], "#0af");
             index++;
         }
 
@@ -101,14 +111,34 @@ function Aqua_MP3_Encoder(PCM_left, PCM_right, filename) {
         offset += 1152;
 
         if(offset >= PCM_left.length) {
-        // if(frameCount >= 100) {
             clearInterval(ENCODER_TIMER);
             $("#timer").html(`${frameNumber} / ${frameNumber} (100%)`);
+            $("#speed").html(`完成`);
             $("#progressbar").css("width", `100%`);
-            console.log(STREAM);
-            let buffer = new Uint8Array(STREAM);
-            let file = new File([buffer], `test.mp3`, {type: `audio/mpeg`});
-            saveAs(file, `${filename}_Aqua.mp3`, true);
+            
+            // “完成”按钮动效，以及点击保存的事件绑定
+            $("#play").animate({"width": "5px"}, 200, () => {
+                $("#play").animate({"height": "35px", "width": "35px"}, 400, () => {
+                    $("#play").addClass("Done");
+                    $("#play").html(`
+                    <div style="line-height: 35px; text-align: center; color: #fff;">
+                        <img id="doneIcon" src="./style/done.svg" style="width: 0px; height: 35px;">
+                    </div>`);
+
+                    $("#doneIcon").animate({"width": "25px"}, 200);
+
+                    $("#play").click(() => {
+                        // 保存到文件
+                        let buffer = new Uint8Array(STREAM);
+                        let file = new File([buffer], `test.mp3`, {type: `audio/mpeg`});
+                        saveAs(file, `${filename}_Aqua.mp3`, true);
+                    });
+                });
+            });
+
+            // let buffer = new Uint8Array(STREAM);
+            // let file = new File([buffer], `test.mp3`, {type: `audio/mpeg`});
+            // saveAs(file, `${filename}_Aqua.mp3`, true);
         }
     }, 0);
 }

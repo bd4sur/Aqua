@@ -25,32 +25,32 @@
 
     <div class="Block">
 
-        <div>
-            <div class="InputButton" id="inputButton">
-                <input type="file" id="fileSelector" name="files[]" multiple class="Input">
-                <span id="inputButtonLabel" class="InputButtonLabel">Open input file...</span>
+        <div class="InputButton" id="inputButton">
+            <canvas id="osc" class="Osc" height="240" width="1152"></canvas>
+            <input type="file" id="fileSelector" name="files[]" multiple class="Input">
+            <div id="inputButtonLabel" class="InputButtonLabel">
+                <div style="line-height: 0px; margin-top: 22px;">
+                    <svg t="1590511838623" class="icon" viewBox="0 0 1024 1024" version="1.1" xmlns="http://www.w3.org/2000/svg" p-id="23587" width="30" height="30"><path d="M777.846 119.65l-422.479 80.896c-22.016 4.333-37.809 23.592-37.77 45.923v449.339c-33.83-13.588-78.06-13.706-121.068 2.836-73.925 28.435-116.066 95.271-94.168 149.267 21.897 53.957 99.564 74.713 173.45 46.277 62.345-24.024 102.124-75.303 99.879-123.195V360.212l371.712-71.208V602.9c-33.792-13.627-78.14-13.785-121.147 2.796-73.886 28.475-115.988 95.31-94.13 149.268 21.898 53.957 99.486 74.712 173.332 46.277 61.204-23.592 100.628-73.531 99.88-120.675h0.157V142.572a23.237 23.237 0 0 0-27.57-22.922z" fill="#bbbbbb" p-id="23588"></path></svg>
+                </div>
+                <div style="line-height: 30px;">选择输入文件...</div>
             </div>
         </div>
 
-        <div style="text-align: center; margin: 15px 0;">
-            <button id="play" data-state="stopped"><span id="playLabel">Start</span></button>
-        </div>
-
-        <div style="margin: 20px 0;">
-            <div id="timer" style="color: #888; font-size: 14px; font-family: 'consolas', Courier, monospace;">Ready</div>
-            <div class="ProcessbarContainer" style="margin: 5px 0;">
+        <div style="text-align: left; margin: 20px 0;">
+            <div style="height: 20px;">
+                <span id="timer" class="Timer" style="float: left;"></span>
+                <span id="speed" class="Timer" style="float: right;"></span>
+            </div>
+            <div id="play" class="PlayButton" data-state="stopped">
+                <span id="playButtonLabel" style="padding: 0 10px;">开始编码</span>
                 <div id="progressbar" style="height: 100%; background-color: #66ccff; width: 0px;"></div>
             </div>
-            <div id="speed" style="color: #888; font-size: 14px; font-family: 'consolas', Courier, monospace;">--</div>
+            
         </div>
 
-        <div class="Block" style="border: 1px solid #eee; border-radius: 10px;">
-            <canvas id="osc" height="240px" width="1152px"></canvas>
-        </div>
     </div>
 
     <footer class="Footer">
-        <div class="Copyright">Version: Not released</div>
         <div class="Copyright">&copy 2019-2020 Mikukonai</div>
     </footer>
 
