@@ -122,7 +122,7 @@ function Aqua_MP3_Encoder(PCM_left, PCM_right, filename) {
                     $("#play").addClass("Done");
                     $("#play").html(`
                     <div style="line-height: 35px; text-align: center; color: #fff;">
-                        <img id="doneIcon" src="./style/done.svg" style="width: 0px; height: 35px;">
+                        <img id="doneIcon" style="width: 0px; height: 35px;" src="data:image/svg+xml,%3Csvg t='1590509837474' class='icon' viewBox='0 0 1024 1024' version='1.1' xmlns='http://www.w3.org/2000/svg' p-id='4042' xmlns:xlink='http://www.w3.org/1999/xlink' width='200' height='200'%3E%3Cdefs%3E%3Cstyle type='text/css'%3E%3C/style%3E%3C/defs%3E%3Cpath d='M935.03 212.628c-28.659-28.662-75.123-28.662-103.78 0l-449.723 449.72L191.26 472.08c-28.66-28.655-75.124-28.655-103.784 0-28.656 28.662-28.656 75.124 0 103.786l242.16 242.156c28.657 28.654 75.123 28.654 103.781 0L935.03 316.404c28.66-28.66 28.66-75.122 0-103.776z' p-id='4043' fill='%23ffffff'%3E%3C/path%3E%3C/svg%3E">
                     </div>`);
 
                     $("#doneIcon").animate({"width": "25px"}, 200);

@@ -5,6 +5,8 @@
 
 MPEG-1 Audio Layer 3 (MP3) 音频编码器。仅供个人学习研究，不宜用于正式的编码工作。正式编码务必使用LAME等成熟的编码器。
 
+[可视化演示](https://mikukonai.com/Aqua/Main.html)
+
 ## 特性规划
 
 正在开发的特性：
