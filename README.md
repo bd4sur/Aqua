@@ -43,14 +43,13 @@ MPEG-1 Audio Layer 3 (MP3) 音频编码器。仅供个人学习研究，不宜�
 |**2020.01.15**|修正若干重大错误，尝试编码若干个完整的音乐文件，效果不错|
 |2020.01.19|项目定名“Aquarius”并设计图标|
 |2020.05.23|项目更名“Aqua”|
+|2020.05.26|用户界面优化|
+|**2020.05.28**|发布首个基线版本（V0.1）|
 |进行中|实现第二心理声学模型和高频预加重|
-|进行中|完善项目文档；处理掉所有TODO|
-|进行中|完成以上工作后，发布第一个基线版本（V0.1.0）|
+|进行中|完善文档和笔记；处理掉所有TODO|
 
 ## 可视化
 
-- [MDCT所使用的4种窗口及其转换](https://mikukonai.com/Aqua/demo/MDCT-windows.html)
-- [低通滤波](https://mikukonai.com/Aqua/demo/LPF.html)（支线任务）
 - [分析子带滤波器组](https://mikukonai.com/Aqua/demo/Filterbank.html)
 
 ## 研究笔记
@@ -60,10 +59,6 @@ MPEG-1 Audio Layer 3 (MP3) 音频编码器。仅供个人学习研究，不宜�
 ![码率和噪声控制循环](./documentation/mp3-qloop.png)
 
 ![帧结构](./documentation/mp3-frame.png)
-
-- [分析子带滤波器组](./documentation/分析子带滤波器组.md)
-- [心理声学模型](./documentation/心理声学模型.md)
-- [发表在博客上的研究笔记](https://mikukonai.com/#/wiki/MP3%E7%BC%96%E8%A7%A3%E7%A0%81%E5%8E%9F%E7%90%86)
 
 ## 调试记录
 
