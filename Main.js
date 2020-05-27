@@ -209,7 +209,7 @@ function EncodeChannel(PCM, offset, meanBitsPerChannel, buffer) {
     //////////////////////////////////
 
 
-    let Spectrum = CalculateGranuleSpectrum(subbands, buffer.PREV_SUBBANDS, blockType); // TODO
+    let Spectrum = GranuleMDCT(subbands, buffer.PREV_SUBBANDS, blockType); // TODO
 
 
     //////////////////////////////////
