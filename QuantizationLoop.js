@@ -175,18 +175,20 @@ function InnerLoop(Spectrum, blockType, bitRateLimit) {
         if(blockType !== WINDOW_SHORT) {
             // 量化
             let LongBlockSpectrum576 = Spectrum[0];
-            // NOTE 下一行中，dist10是减去70。试验结果显示，对于某些测试用例（如 Zwei!! OST 的《おやすみ》），减去70的确可以防止小能量帧出现奇怪的噪声。
-            //      但是这里考虑到性能，采取了一个较小的值30。下同。
-            quantanf = Math.round(8 * Math.log(SFM(LongBlockSpectrum576))) - 30;
+            // NOTE 下一行中，dist10是减去70。试验结果显示，对于某些测试用例（如 Zwei!! OST 的《おやすみ》），减去70的确可以防止准静音帧出现可闻噪声。
+            //      但是这里考虑到性能，采取了一个较小的值40。如果以后测试出问题，将继续修改这个参数。下同。
+            //      简单解释：所谓准静音，指的是幅度非常小、频谱平坦度又较高的片段，例如乐曲开始前或结束后的静音。由于频谱平坦度较高，初始量化步长较大，再加上
+            //               本身幅度较小，因而量化噪音很容易超出掩蔽阈值和/或听阈，导致产生可闻量化噪声。所以，解决的办法就是尽可能减小量化初值。
+            quantanf = Math.round(8 * Math.log(SFM(LongBlockSpectrum576))) - 40;
             quantizedSpectrum576 = Quantize(LongBlockSpectrum576, (quantanf + qquant));
-            globalGain = quantanf + qquant + 210;
+            globalGain = quantanf + qquant + 210; // NOTE 关于这个210的来历，见标准p35的2.4.3.4.7。下同。
         }
         // 短块
         else {
             // 将短块频谱重排成连续的576点频谱，并对其量化
             // NOTE 参考dist10，所有子块是同时量化的
             let ShortBlockSpectrum576 = MuxShortBlockSpectrum(Spectrum);
-            quantanf = Math.round(8 * Math.log(SFM(ShortBlockSpectrum576))) - 30;
+            quantanf = Math.round(8 * Math.log(SFM(ShortBlockSpectrum576))) - 40;
             quantizedSpectrum576 = Quantize(ShortBlockSpectrum576, (quantanf + qquant));
             globalGain = quantanf + qquant + 210;
         }
