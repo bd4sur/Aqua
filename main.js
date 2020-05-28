@@ -200,7 +200,7 @@ function EncodeChannel(PCM, offset, meanBitsPerChannel, buffer) {
     LOG(`窗口类型：${blockType}`);
     let xmin = new Array();
     for(let i = 0; i < 21; i++) { // 应当区分长短块
-        xmin[i] = 1e-12;
+        xmin[i] = Number.MAX_VALUE; // 暂时禁用心理声学模型
     }
 
 

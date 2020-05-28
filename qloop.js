@@ -163,38 +163,34 @@ function CalculatePart2Length(scalefactorCompress, blockType) {
  * @description 内层循环（码率控制循环）
  */
 function InnerLoop(Spectrum, blockType, bitRateLimit) {
-    let globalGain;
-    let huffman;
-    let quantizedSpectrum576;
 
-    let initLength = -1;
+    let initLength = -1; // 用于减少迭代次数
+    let spectrum576;
+
+    // 根据长短块不同，构造576点频谱供量化
+    if(blockType !== WINDOW_SHORT) {
+        spectrum576 = Spectrum[0];
+    }
+    else {
+        spectrum576 = MuxShortBlockSpectrum(Spectrum);
+    }
+
+    // 计算量化初值
+    // NOTE 下一行中，dist10是减去70。试验结果显示，对于某些测试用例（如 Zwei!! OST 的《おやすみ》），减去70的确可以防止准静音帧出现可闻噪声。
+    //      但是这里考虑到性能，采取了一个较小的值40。如果以后测试出问题，将继续修改这个参数。
+    //      简单解释：所谓准静音，指的是幅度非常小、频谱平坦度又较高的片段，例如乐曲开始前或结束后的静音。由于频谱平坦度较高，初始量化步长较大，再加上
+    //               本身幅度较小，因而量化噪音很容易超出掩蔽阈值和/或听阈，导致产生可闻量化噪声。所以，解决的办法就是尽可能减小量化初值。
+    let quantanf = Math.round(8 * Math.log(SFM(spectrum576))) - 40;
 
     for(let qquant = 0; qquant < 256; qquant++) { // global_gain为8bit
-        let quantanf;
-        // 长块
-        if(blockType !== WINDOW_SHORT) {
-            // 量化
-            let LongBlockSpectrum576 = Spectrum[0];
-            // NOTE 下一行中，dist10是减去70。试验结果显示，对于某些测试用例（如 Zwei!! OST 的《おやすみ》），减去70的确可以防止准静音帧出现可闻噪声。
-            //      但是这里考虑到性能，采取了一个较小的值40。如果以后测试出问题，将继续修改这个参数。下同。
-            //      简单解释：所谓准静音，指的是幅度非常小、频谱平坦度又较高的片段，例如乐曲开始前或结束后的静音。由于频谱平坦度较高，初始量化步长较大，再加上
-            //               本身幅度较小，因而量化噪音很容易超出掩蔽阈值和/或听阈，导致产生可闻量化噪声。所以，解决的办法就是尽可能减小量化初值。
-            quantanf = Math.round(8 * Math.log(SFM(LongBlockSpectrum576))) - 40;
-            quantizedSpectrum576 = Quantize(LongBlockSpectrum576, (quantanf + qquant));
-            globalGain = quantanf + qquant + 210; // NOTE 关于这个210的来历，见标准p35的2.4.3.4.7。下同。
-        }
-        // 短块
-        else {
-            // 将短块频谱重排成连续的576点频谱，并对其量化
-            // NOTE 参考dist10，所有子块是同时量化的
-            let ShortBlockSpectrum576 = MuxShortBlockSpectrum(Spectrum);
-            quantanf = Math.round(8 * Math.log(SFM(ShortBlockSpectrum576))) - 40;
-            quantizedSpectrum576 = Quantize(ShortBlockSpectrum576, (quantanf + qquant));
-            globalGain = quantanf + qquant + 210;
-        }
+        // 量化
+        let quantizedSpectrum576 = Quantize(spectrum576, (quantanf + qquant));
+
+        // 保存量化步长
+        let globalGain = quantanf + qquant + 210; // NOTE 关于这个210的来历，见标准p35的2.4.3.4.7。
 
         // 哈夫曼编码
-        huffman = HuffmanEncode(quantizedSpectrum576, blockType);
+        let huffman = HuffmanEncode(quantizedSpectrum576, blockType);
 
         // 以下代码的目的是尽可能减少迭代次数 TODO 这里的可靠性还需要进一步验证
         if(huffman !== null) {
