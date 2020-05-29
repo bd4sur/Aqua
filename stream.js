@@ -1,7 +1,17 @@
 
-/**
- * @description 构建比特流
- */
+/////////////////////////////////////////////////////////////////
+//
+//  Project Aqua - MP3 Audio Encoder / MP3音频编码器
+//
+//  Copyrignt (c) 2019-2020 Mikukonai @ GitHub
+//
+//  =============================================================
+//
+//  stream.js
+//
+//    MP3比特流构建。
+//
+/////////////////////////////////////////////////////////////////
 
 function FormatFrameBitStream(frame, isPadding, mainDataBegin) {
     let fixedData = "";  // Header+CRC+SideIndo

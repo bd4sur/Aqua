@@ -135,4 +135,4 @@ a:hover{
 }
 .PlayButton:hover { color: #00aaff; background-color: #cdeeff;}
 .PlayButton:active { color: #ffffff; background-color: #40bfff;}
-.PlayButton:disabled { color: #888888; background-color: #eeeeee;}
+.PlayButton[disabled] { color: #888888; background-color: #eeeeee;}

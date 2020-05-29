@@ -1,3 +1,16 @@
+/////////////////////////////////////////////////////////////////
+//
+//  Project Aqua - MP3 Audio Encoder / MP3音频编码器
+//
+//  Copyrignt (c) 2019-2020 Mikukonai @ GitHub
+//
+//  =============================================================
+//
+//  decoder.js
+//
+//    哈夫曼解码。仅用于开发、测试。
+//
+/////////////////////////////////////////////////////////////////
 
 let HUFFMAN_TREES = HuffmanTreeInit();
 let HUFFMAN_TREES_DUPLE = HUFFMAN_TREES.HuffmanTreeDuple;

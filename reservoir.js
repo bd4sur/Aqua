@@ -1,13 +1,20 @@
-/**
- * @description 全局变量：比特储备池，单位为bit
- */
-let RESERVOIR_MAX  = 0;
-let RESERVOIR_SIZE = 0;
+/////////////////////////////////////////////////////////////////
+//
+//  Project Aqua - MP3 Audio Encoder / MP3音频编码器
+//
+//  Copyrignt (c) 2019-2020 Mikukonai @ GitHub
+//
+//  =============================================================
+//
+//  reservoir.js
+//
+//    比特储备机制。
+//
+/////////////////////////////////////////////////////////////////
 
-/**
- * @description 设置最大比特储备容量（bits），同dist10的ResvFrameBegin
- */
-function SetReservoirMax(frameLength) {
+
+// 设置最大比特储备容量（bits），同dist10的ResvFrameBegin
+function SetReservoirMax() {
     // 根据当前帧长度修改比特储备池最大长度
     // if(frameLength > 7680) { // NOTE 7680是320k/48kHz的帧比特数（320000*1152/48000=7680）
     //     RESERVOIR_MAX = 0;
@@ -21,10 +28,7 @@ function SetReservoirMax(frameLength) {
     }
 }
 
-/**
- * @description 给每个Channel的分配比特预算
- * ReservoirMaxBits
- */
+// 给每个Channel的分配比特预算
 function AllocateBudget(perceptualEntropy, meanBitsPerChannel) {
     let budget = meanBitsPerChannel;
 
@@ -44,18 +48,14 @@ function AllocateBudget(perceptualEntropy, meanBitsPerChannel) {
     return (budget > 4095) ? 4095 : Math.round(budget); // 因为part23Length最大值为4095
 }
 
-/**
- * @description 编码一个Channel后，将编码后剩余的比特返还给比特储备池
- */
+// 编码一个Channel后，将编码后剩余的比特返还给比特储备池
 function ReturnUnusedBits(part23Length, meanBitsPerChannel) {
     RESERVOIR_SIZE += (meanBitsPerChannel - part23Length);
 }
 
-/**
- * @description 调整比特储备的容量，使其不超过最大容量，并为8的倍数（因为main_data_begin为8的倍数），并将多余的容量填充进main_data
- */
+// 调整比特储备的容量，使其不超过最大容量，并为8的倍数（因为main_data_begin为8的倍数），并将多余的容量填充进main_data
 function RegulateAndStuff(granules) {
-    LOG(`    ► 调整前的main_data_begin = ${RESERVOIR_SIZE / 8} bytes (${RESERVOIR_SIZE} bits)`);
+    // LOG(`    ► 调整前的main_data_begin = ${RESERVOIR_SIZE / 8} bytes (${RESERVOIR_SIZE} bits)`);
     let stuffingBits = 0;
 
     // 若比特储备已经溢出，则将溢出部分从比特储备移除，填充进main_data
@@ -69,7 +69,7 @@ function RegulateAndStuff(granules) {
     RESERVOIR_SIZE -= remainder;
     stuffingBits += remainder;
 
-    LOG(`    ► 调整后的main_data_begin = ${RESERVOIR_SIZE / 8} bytes (${RESERVOIR_SIZE} bits)`);
+    // LOG(`    ► 调整后的main_data_begin = ${RESERVOIR_SIZE / 8} bytes (${RESERVOIR_SIZE} bits)`);
 
     // 将多余的比特填充进main_data，方法是修改part23Length，由formatter执行实际的比特填充。
     // 策略是从第一个granule的第一个channel开始填充，如果充满（长度达到part23Length的上限4095），则继续填充下一channel、下一granule，直至填充完毕。
@@ -79,10 +79,10 @@ function RegulateAndStuff(granules) {
             if(granules[gr][ch].part23Length + stuffingBits > 4095) {
                 stuffingBits -= (4095 - granules[gr][ch].part23Length);
                 granules[gr][ch].part23Length = 4095;
-                LOG(`    ► Granule[${gr}][${ch}] 被填满至4095bits`);
+                // LOG(`    ► Granule[${gr}][${ch}] 被填满至4095bits`);
             }
             else {
-                LOG(`    ► Granule[${gr}][${ch}] 被填充 ${stuffingBits} bits`);
+                // LOG(`    ► Granule[${gr}][${ch}] 被填充 ${stuffingBits} bits`);
                 granules[gr][ch].part23Length += stuffingBits;
                 isFinished = true;
                 break;
