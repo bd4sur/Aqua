@@ -7,6 +7,7 @@
 }
 
 body {
+    font-family: "更纱黑体 SC", Microsoft YaHei, "宋体", "Helvetica Neue", Helvetica, Arial, sans-serif;
     margin: 0;
     padding: 0;
 }
@@ -14,11 +15,11 @@ body {
     padding: 30px 40px 0px 40px;
 }
 
-.TitleBorder {
+.Border {
     display: block;
-    height: 2px;
+    height: 1px;
     border: none;
-    background: linear-gradient(90deg, #ade8fd88, #fff);
+    background: linear-gradient(90deg, #fff, #eee, #fff);
 }
 
 @media(min-width:651px) { /* Desktop */
@@ -52,6 +53,26 @@ body {
 
 .Copyright {
     font-size: 12px; text-align: center; line-height: 25px; color: #ccc;
+}
+
+.Switch {
+    position: relative;
+    display: inline-block;
+    border: 0.5px solid #ddd;
+    background-color: #ccc;
+    border-radius: 100px;
+    width: 36px;
+    height: 20px;
+}
+
+.SwitchSlider {
+    position: absolute;
+    left: 0px;
+    width: 14px; height: 14px;
+    margin: 3px;
+    border: none;
+    border-radius: 100%;
+    background-color: #fff;
 }
 
 .Input {
@@ -117,6 +138,36 @@ body {
 
 .Timer {
     color: #888; font-size: 14px; font-family: 'consolas', Courier, monospace;
+}
+
+.NoteContainer {
+    text-align: center;
+}
+
+.NoteTitle {
+    width: fit-content;
+    text-align: center;
+    margin: 20px auto 10px auto;
+    font-size: 17px;
+    font-weight: bold;
+    letter-spacing: 1px;
+    color: #000;
+}
+.NoteTitle:after {
+    content: "";
+    display: block;
+    border-bottom: 7px solid rgb(159, 223, 255);
+    position: relative;
+    top: -7px;
+    z-index: -1;
+}
+
+.Note {
+    text-align: center;
+    color: #aaa;
+    margin: 10px 0;
+    font-size: 13px;
+    line-height: 19px;
 }
 
 a {

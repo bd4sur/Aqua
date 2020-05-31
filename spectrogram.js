@@ -22,7 +22,7 @@
 const WINDOW_LENGTH = 1024;
 const WINDOW_LENGTH_HALF = 512;
 
-const SPECTROGRAM_BUFFER_LENGTH = 500;
+const SPECTROGRAM_BUFFER_LENGTH = 400;
 
 ///////////////////////////////////
 //
@@ -43,7 +43,6 @@ function SpectrogramInit(canvasId) {
     
     cv = new Canvas(`${canvasId}`, [0, 0], [WINDOW_LENGTH_HALF, WINDOW_LENGTH_HALF]); // 此处坐标尺度的设置没有用
     cv.Init();
-    cv.SetBackgroundColor("#000");
 
     // Hann窗
 

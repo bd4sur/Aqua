@@ -14,6 +14,11 @@
 
 let AudioContext = new window.AudioContext();
 
+let isSpetrogramShow = false;
+
+SpectrogramInit("spectrogram");
+cv.Reset([0, -1.2], [WINDOW_LENGTH, 1.2]);
+
 $("#fileSelector").change(() => {
 
     // 获取文件名
@@ -70,11 +75,9 @@ function decode(rawAudioData, filename) {
         bufferSourceNode.buffer = audioBuffer;
         bufferSourceNode.start(0);
 
-        ///////////////////////////////////
-        //  绘制声谱图（会严重拖慢运行速度）
-        ///////////////////////////////////
-
-        SpectrogramInit("spectrogram");
+        /////////////////////////////////////////////
+        //  绘制声谱图（会严重拖慢运行速度）或波形图
+        /////////////////////////////////////////////
 
         $(".InputButtonLabel").css("color", "#fff");
         $(".InputButton").css("border", "none");
@@ -88,19 +91,32 @@ function decode(rawAudioData, filename) {
             let currentTime = AudioContext.currentTime;
             let offset = Math.round((currentTime - START_TIME) * sampleRate);
 
-            // 计算帧边缘的offset
-            let frameAlignedOffset = Math.floor(offset / WINDOW_LENGTH) * WINDOW_LENGTH;
-            if(prevFrameAlignedOffset === frameAlignedOffset) {
-                return;
+            // 控制是否绘制声谱图
+            if(!isSpetrogramShow) {
+                // cv.Clear();
+                cv.SetBackgroundColor("#000");
+                let window = leftChannel.slice(offset, offset + WINDOW_LENGTH);
+                let index = 0;
+                for(let x = 1; x < WINDOW_LENGTH; x++) {
+                    cv.Line([x-1, window[index-1]], [x, window[index]], "#0af");
+                    index++;
+                }
             }
-            prevFrameAlignedOffset = frameAlignedOffset;
+            else {
+                // 计算帧边缘的offset
+                let frameAlignedOffset = Math.floor(offset / WINDOW_LENGTH) * WINDOW_LENGTH;
+                if(prevFrameAlignedOffset === frameAlignedOffset) {
+                    return;
+                }
+                prevFrameAlignedOffset = frameAlignedOffset;
 
-            // 计算频谱并推入缓冲区
-            let spectrum = CalculateSpectrum(frameAlignedOffset, leftChannel);
-            PushIntoBuffer(spectrum, SPECTROGRAM_BUFFER, SPECTROGRAM_BUFFER_LENGTH);
+                // 计算频谱并推入缓冲区
+                let spectrum = CalculateSpectrum(frameAlignedOffset, leftChannel);
+                PushIntoBuffer(spectrum, SPECTROGRAM_BUFFER, SPECTROGRAM_BUFFER_LENGTH);
 
-            // 绘制声谱图
-            RenderSpectrogram(cv, SPECTROGRAM_BUFFER, WINDOW_LENGTH);
+                // 绘制声谱图
+                RenderSpectrogram(cv, SPECTROGRAM_BUFFER, WINDOW_LENGTH);
+            }
 
             // 播放完毕自动停止
             if(offset >= length) {
@@ -114,33 +130,11 @@ function decode(rawAudioData, filename) {
             let frameCount = info.frameCount;
             let frameNumber = info.frameNumber;
             let speed = info.speed;
-            // let offset = info.offset;
-            // let PCM = info.PCM;
-            // let spect = info.spect;
 
             $("#timer").html(`${(frameCount / frameNumber * 100).toFixed(1)}% (${frameCount}/${frameNumber})`);
             $("#speed").html(`${speed}x`);
             $("#progressbar").css("width", `${(frameCount / frameNumber * 100).toFixed(2)}%`);
 
-            // 绘制576点频谱
-            // cv.Clear();
-            // cv.SetBackgroundColor("#fff");
-
-            // 频谱
-            // let spect = frame[0][0].granules.spectrum;
-            // let index = 0;
-            // for(let x = 0; x < 576; x++) {
-            //     cv.Line([x, 0], [x, spect[index]], "#0af");
-            //     index++;
-            // }
-
-            // 波形
-            // let window = PCM.slice(offset, offset + 1152);
-            // let index = 0;
-            // for(let x = 1; x < 1152; x++) {
-            //     cv.Line([x-1, window[index-1]], [x, window[index]], "#0af");
-            //     index++;
-            // }
         };
 
         const onFinished = (info) => {
@@ -166,7 +160,20 @@ function decode(rawAudioData, filename) {
                         // 保存到文件
                         let buffer = new Uint8Array(byteStream);
                         let file = new File([buffer], `test.mp3`, {type: `audio/mpeg`});
-                        saveAs(file, `${filename}_Aqua.mp3`, true);
+
+                        // 去掉扩展名
+                        filename = filename.replace(/\..+$/gi, "");
+
+                        // 组装日期字符串
+                        let date = new Date();
+                        let year = date.getFullYear();
+                        let month = date.getMonth() + 1; month = (month < 10) ? `0${month}` : String(month);
+                        let day = date.getDate(); day = (day < 10) ? `0${day}` : String(day);
+                        let hour = date.getHours(); hour = (hour < 10) ? `0${hour}` : String(hour);
+                        let minute = date.getMinutes(); minute = (minute < 10) ? `0${minute}` : String(minute);
+                        let second = date.getSeconds(); second = (second < 10) ? `0${second}` : String(second);
+
+                        saveAs(file, `${filename}_Aqua_${year}${month}${day}_${hour}${minute}${second}.mp3`, true);
                     });
                 });
             });
@@ -177,3 +184,29 @@ function decode(rawAudioData, filename) {
 
     });
 }
+
+$("#canvasSwitch").click(() => {
+    let slider = $("#canvasSwitch").children(".SwitchSlider");
+    let state = $("#canvasSwitch").attr("data-state");
+    if(state === "1") {
+        $("#canvasSwitch").css("border", "0.5px solid #bbb");
+        $("#canvasSwitch").css("background-color", "#ccc");
+        slider.animate({"left": "0px"}, 100);
+
+        isSpetrogramShow = false;
+        // $("#spectrogram").fadeOut();
+
+        $("#canvasSwitch").attr("data-state", "0");
+    }
+    else if(state === "0") {
+        $("#canvasSwitch").css("border", "0.5px solid #6cf");
+        $("#canvasSwitch").css("background-color", "#6cf");
+        slider.animate({"left": "16px"}, 100);
+
+        isSpetrogramShow = true;
+        cv.Reset([0, -1.2], [WINDOW_LENGTH, 1.2]);
+        // $("#spectrogram").fadeIn();
+
+        $("#canvasSwitch").attr("data-state", "1");
+    }
+});

@@ -21,6 +21,16 @@ Canvas.prototype = {
         this.canvas.width = this.canvas.width * this.RATIO;
         this.canvas.height = this.canvas.height * this.RATIO;
     },
+    Reset: function(bottomLeft, topRight) {
+        this.Xmin = bottomLeft[0];
+        this.Xmax = topRight[0];
+        this.Xrange = this.Xmax - this.Xmin;
+        this.Ymin = bottomLeft[1];
+        this.Ymax = topRight[1];
+        this.Yrange = this.Ymax - this.Ymin;
+        this.RATIO = 1;
+        this.Init();
+    },
     toCanvasX: function (x) {
         return (x - this.Xmin) * this.canvas.width / this.Xrange;
     },
