@@ -12,11 +12,6 @@
 //
 /////////////////////////////////////////////////////////////////
 
-let cv = new Canvas("osc", [0,-1.1], [1152, 1.1]);
-
-cv.Init();
-cv.SetBackgroundColor("#fff");
-
 let AudioContext = new window.AudioContext();
 
 $("#fileSelector").change(() => {
@@ -65,6 +60,7 @@ function decode(rawAudioData, filename) {
     AudioContext.decodeAudioData(rawAudioData, (audioBuffer) => {
         // 获取两个声道的原始数据
         let sampleRate = audioBuffer.sampleRate;
+        let length = audioBuffer.length;
         let leftChannel  = audioBuffer.getChannelData(0);
         let rightChannel = audioBuffer.getChannelData(1);
 
@@ -74,12 +70,52 @@ function decode(rawAudioData, filename) {
         bufferSourceNode.buffer = audioBuffer;
         bufferSourceNode.start(0);
 
+        ///////////////////////////////////
+        //  绘制声谱图（会严重拖慢运行速度）
+        ///////////////////////////////////
+
+        SpectrogramInit("spectrogram");
+
+        $(".InputButtonLabel").css("color", "#fff");
+        $(".InputButton").css("border", "none");
+        $(".InputButtonLabel").animate({"line-height": "30px"}, 500);
+
+        let START_TIME = AudioContext.currentTime;
+        let prevFrameAlignedOffset = 0;
+
+        // 计时器
+        let timer = setInterval(() => {
+            let currentTime = AudioContext.currentTime;
+            let offset = Math.round((currentTime - START_TIME) * sampleRate);
+
+            // 计算帧边缘的offset
+            let frameAlignedOffset = Math.floor(offset / WINDOW_LENGTH) * WINDOW_LENGTH;
+            if(prevFrameAlignedOffset === frameAlignedOffset) {
+                return;
+            }
+            prevFrameAlignedOffset = frameAlignedOffset;
+
+            // 计算频谱并推入缓冲区
+            let spectrum = CalculateSpectrum(frameAlignedOffset, leftChannel);
+            PushIntoBuffer(spectrum, SPECTROGRAM_BUFFER, SPECTROGRAM_BUFFER_LENGTH);
+
+            // 绘制声谱图
+            RenderSpectrogram(cv, SPECTROGRAM_BUFFER, WINDOW_LENGTH);
+
+            // 播放完毕自动停止
+            if(offset >= length) {
+                bufferSourceNode.stop();
+                clearInterval(timer);
+            }
+
+        }, 0);
+
         const onRunning = (info) => {
             let frameCount = info.frameCount;
             let frameNumber = info.frameNumber;
             let speed = info.speed;
-            let offset = info.offset;
-            let PCM = info.PCM;
+            // let offset = info.offset;
+            // let PCM = info.PCM;
             // let spect = info.spect;
 
             $("#timer").html(`${(frameCount / frameNumber * 100).toFixed(1)}% (${frameCount}/${frameNumber})`);
@@ -87,8 +123,8 @@ function decode(rawAudioData, filename) {
             $("#progressbar").css("width", `${(frameCount / frameNumber * 100).toFixed(2)}%`);
 
             // 绘制576点频谱
-            cv.Clear();
-            cv.SetBackgroundColor("#fff");
+            // cv.Clear();
+            // cv.SetBackgroundColor("#fff");
 
             // 频谱
             // let spect = frame[0][0].granules.spectrum;
@@ -99,12 +135,12 @@ function decode(rawAudioData, filename) {
             // }
 
             // 波形
-            let window = PCM.slice(offset, offset + 1152);
-            let index = 0;
-            for(let x = 1; x < 1152; x++) {
-                cv.Line([x-1, window[index-1]], [x, window[index]], "#0af");
-                index++;
-            }
+            // let window = PCM.slice(offset, offset + 1152);
+            // let index = 0;
+            // for(let x = 1; x < 1152; x++) {
+            //     cv.Line([x-1, window[index-1]], [x, window[index]], "#0af");
+            //     index++;
+            // }
         };
 
         const onFinished = (info) => {
