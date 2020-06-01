@@ -30,6 +30,21 @@ const SPECTROGRAM_BUFFER_LENGTH = 400;
 //
 ///////////////////////////////////
 
+const BLACK  = [0, 0, 0];
+const PURPLE = [128, 0, 255];
+const BLUE   = [0, 0, 255];
+const CYAN   = [0, 255, 255];
+const GREEN  = [0, 255, 0];
+const YELLOW = [255, 255, 0];
+const ORANGE = [255, 200, 0];
+const RED    = [255, 0, 0];
+const WHITE  = [255, 255, 255];
+
+const MIN = -30;
+const MAX = 50;
+let SCALE = new Array();
+
+
 let SPECTROGRAM_BUFFER = new Array();
 let HANN_WINDOW = new Array();
 let cv;
@@ -49,6 +64,12 @@ function SpectrogramInit(canvasId) {
     HANN_WINDOW = new Array();
     for(let i = 0; i < WINDOW_LENGTH; i++) {
         HANN_WINDOW[i] = 0.5 * (1 - Math.cos(2 * Math.PI * i / (WINDOW_LENGTH - 1)));
+    }
+
+    // 颜色因子
+
+    for(let i = 0; i < 9; i++) {
+        SCALE[i] = ((MAX-MIN) / 2.828) * Math.sqrt(i) + MIN;
     }
 }
 
@@ -139,23 +160,6 @@ function colorInterpolation(color1, color2, ratio) {
 
 // dB转颜色
 function dB2Color(dB) {
-    const BLACK  = [0, 0, 0];
-    const PURPLE = [128, 0, 255];
-    const BLUE   = [0, 0, 255];
-    const CYAN   = [0, 255, 255];
-    const GREEN  = [0, 255, 0];
-    const YELLOW = [255, 255, 0];
-    const ORANGE = [255, 200, 0];
-    const RED    = [255, 0, 0];
-    const WHITE  = [255, 255, 255];
-
-    const MIN = -30;
-    const MAX = 50;
-    let SCALE = new Array();
-    for(let i = 0; i < 9; i++) {
-        SCALE[i] = ((MAX-MIN) / 2.828) * Math.sqrt(i) + MIN;
-    }
-
     if(dB < SCALE[0]) { return BLACK; }
     else if(dB < SCALE[1]) { return colorInterpolation(BLACK,  PURPLE,  (dB-SCALE[0]) / (SCALE[1]-SCALE[0])); }
     else if(dB < SCALE[2]) { return colorInterpolation(PURPLE, BLUE,    (dB-SCALE[1]) / (SCALE[2]-SCALE[1])); }
