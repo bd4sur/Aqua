@@ -2,7 +2,7 @@
 //
 //  Project Aqua - MP3 Audio Encoder / MP3音频编码器
 //
-//  Copyrignt (c) 2019-2020 Mikukonai @ GitHub
+//  Copyright (c) 2019-2020 Mikukonai @ GitHub
 //
 //  =============================================================
 //
@@ -35,7 +35,7 @@ function SFM(xr576) {
 /**
  * @description 计算各个尺度因子频带的量化误差
  */
-function CalculateQuantNoise(xr, ix, quantStep, blockType) {
+function QuantNoise(xr, ix, quantStep, blockType) {
     let xfsf = new Array();
     let SFB = ScaleFactorBands[SAMPLE_RATE][blockType];
     for(let sbindex = 0; sbindex < SFB.length; sbindex++) {
@@ -123,7 +123,7 @@ function DemuxShortBlockSpectrum(spect576) {
  * @input  blockType - 窗口类型（长块或短块）
  * @output scalefac_compress
  */
-function CalculateScalefactorCompress(Scalefactors, blockType) {
+function ScalefactorCompress(Scalefactors, blockType) {
     let maxValue1 = -1;
     let maxValue2 = -1;
     if(blockType !== WINDOW_SHORT) {
@@ -158,7 +158,7 @@ function CalculateScalefactorCompress(Scalefactors, blockType) {
 /**
  * @description 计算part2（尺度因子）长度
  */
-function CalculatePart2Length(scalefactorCompress, blockType) {
+function Part2Length(scalefactorCompress, blockType) {
     let part2Length = 0;
     let slens = SF_COMPRESS_INDEX[scalefactorCompress];
     if(blockType !== WINDOW_SHORT) {
@@ -306,7 +306,7 @@ function OuterLoop(
 
             // 【计算量化噪声】
 
-            let xfsf = CalculateQuantNoise(Spectrum[0], innerLoopOutput.quantizedSpectrum576, innerLoopOutput.globalGain - 210, LONG_BLOCK);
+            let xfsf = QuantNoise(Spectrum[0], innerLoopOutput.quantizedSpectrum576, innerLoopOutput.globalGain - 210, LONG_BLOCK);
 
             // 【预加重】（暂缓实现）
 
@@ -375,8 +375,8 @@ function OuterLoop(
             }
             //////// EXIT ////////
             if(isExit) {
-                let scalefactorCompress = CalculateScalefactorCompress(result.scalefactors, result.blockType);
-                let part2Length = CalculatePart2Length(scalefactorCompress, result.blockType);
+                let scalefactorCompress = ScalefactorCompress(result.scalefactors, result.blockType);
+                let part2Length = Part2Length(scalefactorCompress, result.blockType);
                 result.scalefactorCompress = scalefactorCompress;
                 result.part23Length = part2Length + result.huffman.codeString.length;
                 return result;
@@ -401,7 +401,7 @@ function OuterLoop(
 
                 // 【计算量化噪声】
 
-                let xfsf = CalculateQuantNoise(Spectrum[window], quantizedShortSpectrum, innerLoopOutput.globalGain - 210, SHORT_BLOCK);
+                let xfsf = QuantNoise(Spectrum[window], quantizedShortSpectrum, innerLoopOutput.globalGain - 210, SHORT_BLOCK);
 
                 // 【预加重】（暂缓实现）
 
@@ -475,8 +475,8 @@ function OuterLoop(
                     "quantizedSpectrum576": innerLoopOutput.quantizedSpectrum576
                 };
                 // 计算尺度因子长度
-                let scalefactorCompress = CalculateScalefactorCompress(result.scalefactors, result.blockType);
-                let part2Length = CalculatePart2Length(scalefactorCompress, result.blockType);
+                let scalefactorCompress = ScalefactorCompress(result.scalefactors, result.blockType);
+                let part2Length = Part2Length(scalefactorCompress, result.blockType);
                 result.scalefactorCompress = scalefactorCompress;
                 result.part23Length = part2Length + result.huffman.codeString.length;
                 return result;
