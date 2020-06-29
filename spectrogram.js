@@ -49,6 +49,8 @@ let SPECTROGRAM_BUFFER = new Array();
 let HANN_WINDOW = new Array();
 let cv;
 
+let fft = new FFT(WINDOW_LENGTH);
+
 function SpectrogramInit(canvasId) {
 
     // 初始化Canvas
@@ -128,11 +130,15 @@ function CalculateSpectrum(offset, data) {
         offset++;
     }
 
-    let fftout = FFT(RealArrayToComplexArray(windowed), WINDOW_LENGTH);
+    let windowed_i = new Array(WINDOW_LENGTH);
+    windowed_i.fill(0, 0, WINDOW_LENGTH);
+    let fftout = fft.fft([windowed, windowed_i]);
 
     let spectrum = new Array();
     for(let i = 0; i < WINDOW_LENGTH_HALF; i++) { // 仅前一半有意义
-        spectrum[i] = 10 * Math.log10(fftout[i].energy()); // 取分贝数
+        let re = fftout[0][i];
+        let im = fftout[1][i];
+        spectrum[i] = 10 * Math.log10(re * re + im * im); // 取分贝数
     }
 
     return spectrum;
