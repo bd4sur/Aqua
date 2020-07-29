@@ -30,21 +30,6 @@ const SPECTROGRAM_BUFFER_LENGTH = 400;
 //
 ///////////////////////////////////
 
-const BLACK  = [0, 0, 0];
-const PURPLE = [128, 0, 255];
-const BLUE   = [0, 0, 255];
-const CYAN   = [0, 255, 255];
-const GREEN  = [0, 255, 0];
-const YELLOW = [255, 255, 0];
-const ORANGE = [255, 200, 0];
-const RED    = [255, 0, 0];
-const WHITE  = [255, 255, 255];
-
-const MIN = -30;
-const MAX = 50;
-let SCALE = new Array();
-
-
 let SPECTROGRAM_BUFFER = new Array();
 let HANN_WINDOW = new Array();
 let cv;
@@ -66,12 +51,6 @@ function SpectrogramInit(canvasId) {
     HANN_WINDOW = new Array();
     for(let i = 0; i < WINDOW_LENGTH; i++) {
         HANN_WINDOW[i] = 0.5 * (1 - Math.cos(2 * Math.PI * i / (WINDOW_LENGTH - 1)));
-    }
-
-    // 颜色因子
-
-    for(let i = 0; i < 9; i++) {
-        SCALE[i] = ((MAX-MIN) / 2.828) * Math.sqrt(i) + MIN;
     }
 }
 
@@ -151,32 +130,49 @@ function CalculateSpectrum(offset, data) {
 //
 ///////////////////////////////////
 
-// 颜色插值
-function colorInterpolation(color1, color2, ratio) {
-    let r1 = color1[0]; let r2 = color2[0];
-    let g1 = color1[1]; let g2 = color2[1];
-    let b1 = color1[2]; let b2 = color2[2];
 
-    let r = (ratio * r2 + r1) / (1 + ratio);
-    let g = (ratio * g2 + g1) / (1 + ratio);
-    let b = (ratio * b2 + b1) / (1 + ratio);
-
-    return [r, g, b];
+// HSV转RGB（[0,1]）
+function HSV_to_RGB(h, s, v) {
+    let hi = Math.floor(h / 60);
+    let f = h / 60 - hi;
+    let p = v * (1 - s);
+    let q = v * (1 - f * s);
+    let t = v * (1 - (1 - f) * s);
+    switch(hi) {
+        case 0: return [v, t, p];
+        case 1: return [q, v, p];
+        case 2: return [p, v, t];
+        case 3: return [p, q, v];
+        case 4: return [t, p, v];
+        case 5: return [v, p, q];
+        default: return [0, 0, 0];
+    }
 }
 
 // dB转颜色
 function dB2Color(dB) {
-    if(dB < SCALE[0]) { return BLACK; }
-    else if(dB < SCALE[1]) { return colorInterpolation(BLACK,  PURPLE,  (dB-SCALE[0]) / (SCALE[1]-SCALE[0])); }
-    else if(dB < SCALE[2]) { return colorInterpolation(PURPLE, BLUE,    (dB-SCALE[1]) / (SCALE[2]-SCALE[1])); }
-    else if(dB < SCALE[3]) { return colorInterpolation(BLUE,   CYAN,    (dB-SCALE[2]) / (SCALE[3]-SCALE[2])); }
-    else if(dB < SCALE[4]) { return colorInterpolation(CYAN,   GREEN,   (dB-SCALE[3]) / (SCALE[4]-SCALE[3])); }
-    else if(dB < SCALE[5]) { return colorInterpolation(GREEN,  YELLOW,  (dB-SCALE[4]) / (SCALE[5]-SCALE[4])); }
-    else if(dB < SCALE[6]) { return colorInterpolation(YELLOW, ORANGE,  (dB-SCALE[5]) / (SCALE[6]-SCALE[5])); }
-    else if(dB < SCALE[7]) { return colorInterpolation(ORANGE, RED,     (dB-SCALE[6]) / (SCALE[7]-SCALE[6])); }
-    else if(dB < SCALE[8]) { return colorInterpolation(RED,    WHITE,   (dB-SCALE[7]) / (SCALE[8]-SCALE[7])); }
-    else return WHITE;
 
+    const MIN = -20;
+    const MAX = 50;
+
+    let ratio = (dB - MIN) / (MAX - MIN);
+    let hue, v;
+    const threshold = 0.12;
+    if(ratio < threshold) {
+        v = 1 - (threshold - ratio) / threshold;
+        hue = (1 - threshold) * (1 - threshold) * 360;
+    }
+    else {
+        v = 1;
+        hue = (1-ratio) * (1-ratio) * 360;
+    }
+    let rgb = HSV_to_RGB(hue, 1, v);
+
+    return [
+        ((rgb[0] * 255) | 0),
+        ((rgb[1] * 255) | 0),
+        ((rgb[2] * 255) | 0)
+    ];
 }
 
 // 绘制声谱图
