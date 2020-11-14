@@ -3,7 +3,9 @@
 
 ------
 
-MPEG-1 Audio Layer 3 (MP3) 音频编码器。仅供个人学习研究，不宜用于正式的编码工作。正式编码务必使用LAME等成熟的编码器。
+MPEG-1 Audio Layer 3 (MP3) 音频编码器。参照 ISO/IEC 11172-3 实现。
+
+本编码器仅供个人学习研究，不宜用于实际的音频编码工作，请务必使用LAME等成熟的编码器。
 
 **▶ [可视化演示](https://mikukonai.com/Aqua/index.html)**
 
@@ -54,11 +56,9 @@ MPEG-1 Audio Layer 3 (MP3) 音频编码器。仅供个人学习研究，不宜�
 
 ## 研究笔记
 
-![编码器框图](./documentation/mp3-encoder-diagram.png)
+![编码器框图](./documentation/aqua-overview.png)
 
-![码率和噪声控制循环](./documentation/mp3-qloop.png)
-
-![帧结构](./documentation/mp3-frame.png)
+![码率和噪声控制循环](./documentation/aqua-rdo-loop.png)
 
 ## 权利声明
 
