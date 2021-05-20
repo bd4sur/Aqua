@@ -3,21 +3,21 @@
 
 ------
 
-MPEG-1 Audio Layer 3 (MP3) 音频编码器。参照 ISO/IEC 11172-3 实现。
+MPEG-1 Audio Layer 3 (MP3) 音频编码器。依据 ISO/IEC 11172-3 及其配套的示例代码“dist10”实现。
 
-本编码器仅供个人学习研究，不宜用于实际的音频编码工作，请务必使用LAME等成熟的编码器。
+本编码器仅供作者个人学习研究，请勿用于正式的（尤其是以存档为目的的）音频编码工作。请务必使用LAME等成熟的编码器。
 
-**▶ [可视化演示](https://mikukonai.com/Aqua/index.html)**
+**▶ [可视化演示](https://bd4sur.com/Aqua/index.html)**
 
 ## 特性规划
 
-正在开发的特性：
+计划开发的特性：
 
 - 第二心理声学模型
+- 联合立体声
 
 暂不实现的特性：
 
-- 联合立体声
 - 混合块
 - 尺度因子预测（即scfsi）
 - 低采样率支持（MPEG-2标准）
@@ -52,7 +52,7 @@ MPEG-1 Audio Layer 3 (MP3) 音频编码器。参照 ISO/IEC 11172-3 实现。
 
 ## 可视化
 
-- [分析子带滤波器组](https://mikukonai.com/Aqua/demo/Filterbank.html)
+- [分析子带滤波器组](https://bd4sur.com/Aqua/demo/Filterbank.html)
 
 ## 研究笔记
 
@@ -62,13 +62,13 @@ MPEG-1 Audio Layer 3 (MP3) 音频编码器。参照 ISO/IEC 11172-3 实现。
 
 ## 权利声明
 
-版权所有 © 2019 Mikukonai@GitHub，保留所有权利。
+版权所有 © 2019 BD4SUR@GitHub，保留所有权利。
 
 采用MIT协议授权。
 
 本系统为个人以学习和自用目的所创作的作品。作者不对此系统的质量作任何承诺，不保证提供任何形式的解释、维护或支持，也不为任何人使用此系统所造成的任何正面的或负面的后果负责。
 
-**第三方库:**
+**第三方组件**
 
 - [jQuery](https://jquery.com/)
 - [FileSaver.js](https://github.com/eligrey/FileSaver.js)

@@ -3,7 +3,7 @@
 //
 //  Project Aqua - MP3 Audio Encoder / MP3音频编码器
 //
-//  Copyright (c) 2019-2020 Mikukonai @ GitHub
+//  Copyright (c) 2019-2020 BD4SUR @ GitHub
 //
 //  =============================================================
 //
