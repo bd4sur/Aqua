@@ -152,8 +152,13 @@ function HSV_to_RGB(h, s, v) {
 // dB转颜色
 function dB2Color(dB) {
 
+    /*
     const MIN = -20;
     const MAX = 50;
+    */
+
+    const MIN = 0;
+    const MAX = 255;
 
     let ratio = (dB - MIN) / (MAX - MIN);
     let hue, v;

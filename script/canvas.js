@@ -12,6 +12,7 @@ function Canvas(cvElementId, bottomLeft, topRight) {
 }
 Canvas.prototype = {
     Init: function () {
+        /*
         function adaptRatio(context) {
             var devicePixelRatio = window.devicePixelRatio || 1;
             var backingStoreRatio = context.webkitBackingStorePixelRatio || context.mozBackingStorePixelRatio || context.msBackingStorePixelRatio || context.oBackingStorePixelRatio || context.backingStorePixelRatio || 1;
@@ -20,6 +21,7 @@ Canvas.prototype = {
         this.RATIO = adaptRatio(this.context);
         this.canvas.width = this.canvas.width * this.RATIO;
         this.canvas.height = this.canvas.height * this.RATIO;
+        */
     },
     Reset: function(bottomLeft, topRight) {
         this.Xmin = bottomLeft[0];

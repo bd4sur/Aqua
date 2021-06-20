@@ -75,6 +75,14 @@ function decode(rawAudioData, filename) {
         bufferSourceNode.buffer = audioBuffer;
         bufferSourceNode.start(0);
 
+        const analyser = AudioContext.createAnalyser();
+        analyser.fftSize = WINDOW_LENGTH;
+        analyser.smoothingTimeConstant = 0.1;
+        const bufferLength = analyser.frequencyBinCount;
+        const dataArray = new Uint8Array(bufferLength);
+
+        bufferSourceNode.connect(analyser);
+
         /////////////////////////////////////////////
         //  绘制声谱图（会严重拖慢运行速度）或波形图
         /////////////////////////////////////////////
@@ -103,6 +111,12 @@ function decode(rawAudioData, filename) {
                 }
             }
             else {
+
+                analyser.getByteFrequencyData(dataArray);
+                let spectrum = Array.from(dataArray);
+                PushIntoBuffer(spectrum, SPECTROGRAM_BUFFER, SPECTROGRAM_BUFFER_LENGTH);
+
+                /*//////////////////////////////////////////////////////////////////////////////////
                 // 计算帧边缘的offset
                 let frameAlignedOffset = Math.floor(offset / WINDOW_LENGTH) * WINDOW_LENGTH;
                 if(prevFrameAlignedOffset === frameAlignedOffset) {
@@ -113,6 +127,8 @@ function decode(rawAudioData, filename) {
                 // 计算频谱并推入缓冲区
                 let spectrum = CalculateSpectrum(frameAlignedOffset, leftChannel);
                 PushIntoBuffer(spectrum, SPECTROGRAM_BUFFER, SPECTROGRAM_BUFFER_LENGTH);
+                //////////////////////////////////////////////////////////////////////////////////*/
+
 
                 // 绘制声谱图
                 RenderSpectrogram(cv, SPECTROGRAM_BUFFER, WINDOW_LENGTH);
