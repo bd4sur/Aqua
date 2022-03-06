@@ -32,19 +32,14 @@ const SPECTROGRAM_BUFFER_LENGTH = 400;
 
 let SPECTROGRAM_BUFFER = new Array();
 let HANN_WINDOW = new Array();
-let cv;
 
 let fft = new FFT(WINDOW_LENGTH);
 
 function SpectrogramInit(canvasId) {
 
     // 初始化Canvas
-
-    $(`#${canvasId}`).attr("width",  `${SPECTROGRAM_BUFFER_LENGTH}px`);
-    $(`#${canvasId}`).attr("height", `${WINDOW_LENGTH_HALF}px`);
-    
-    cv = new Canvas(`${canvasId}`, [0, 0], [WINDOW_LENGTH_HALF, WINDOW_LENGTH_HALF]); // 此处坐标尺度的设置没有用
-    cv.Init();
+    let cv = new Canvas(`${canvasId}`, [0, -1.2], [WINDOW_LENGTH, 1.2]); // oscillator
+    cv.Resize([0, -1.2], [WINDOW_LENGTH, 1.2], WINDOW_LENGTH, 200); // oscillator
 
     // Hann窗
 
@@ -52,6 +47,8 @@ function SpectrogramInit(canvasId) {
     for(let i = 0; i < WINDOW_LENGTH; i++) {
         HANN_WINDOW[i] = 0.5 * (1 - Math.cos(2 * Math.PI * i / (WINDOW_LENGTH - 1)));
     }
+
+    return cv;
 }
 
 

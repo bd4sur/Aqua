@@ -16,8 +16,7 @@ let AudioContext = new window.AudioContext();
 
 let isSpetrogramShow = false;
 
-SpectrogramInit("spectrogram");
-cv.Reset([0, -1.2], [WINDOW_LENGTH, 1.2]);
+let cv = SpectrogramInit("spectrogram");
 
 $("#fileSelector").change(() => {
 
@@ -92,30 +91,32 @@ function decode(rawAudioData, filename) {
         $(".InputButtonLabel").animate({"line-height": "30px"}, 500);
 
         let START_TIME = AudioContext.currentTime;
-        let prevFrameAlignedOffset = 0;
+        // let prevFrameAlignedOffset = 0;
 
-        // 计时器
-        let timer = setInterval(() => {
+        // 显示示波器或者声谱图（不参与编码）
+        function play() {
+        // let timer = setInterval(() => {
             let currentTime = AudioContext.currentTime;
             let offset = Math.round((currentTime - START_TIME) * sampleRate);
 
             // 控制是否绘制声谱图
+            // 1 示波器
             if(!isSpetrogramShow) {
                 // cv.Clear();
                 cv.SetBackgroundColor("#000");
+                cv.Line([cv.Xmin, 0], [cv.Xmax, 0], "#666");
                 let window = leftChannel.slice(offset, offset + WINDOW_LENGTH);
                 let index = 0;
                 for(let x = 1; x < WINDOW_LENGTH; x++) {
-                    cv.Line([x-1, window[index-1]], [x, window[index]], "#0af");
+                    cv.Line([x-1, window[index-1]], [x, window[index]], "#0f0");
                     index++;
                 }
             }
+            // 2 声谱图（改为使用 Web Audio API 获取频谱）
             else {
-
                 analyser.getByteFrequencyData(dataArray);
                 let spectrum = Array.from(dataArray);
                 PushIntoBuffer(spectrum, SPECTROGRAM_BUFFER, SPECTROGRAM_BUFFER_LENGTH);
-
                 /*//////////////////////////////////////////////////////////////////////////////////
                 // 计算帧边缘的offset
                 let frameAlignedOffset = Math.floor(offset / WINDOW_LENGTH) * WINDOW_LENGTH;
@@ -128,8 +129,6 @@ function decode(rawAudioData, filename) {
                 let spectrum = CalculateSpectrum(frameAlignedOffset, leftChannel);
                 PushIntoBuffer(spectrum, SPECTROGRAM_BUFFER, SPECTROGRAM_BUFFER_LENGTH);
                 //////////////////////////////////////////////////////////////////////////////////*/
-
-
                 // 绘制声谱图
                 RenderSpectrogram(cv, SPECTROGRAM_BUFFER, WINDOW_LENGTH);
             }
@@ -137,10 +136,14 @@ function decode(rawAudioData, filename) {
             // 播放完毕自动停止
             if(offset >= length) {
                 bufferSourceNode.stop();
-                clearInterval(timer);
+                // clearInterval(timer);
             }
-
-        }, 0);
+            else {
+                requestAnimationFrame(play);
+            }
+        }
+        // }, 0);
+        requestAnimationFrame(play);
 
         const onRunning = (info) => {
             let frameCount = info.frameCount;
@@ -210,6 +213,7 @@ $("#canvasSwitch").click(() => {
         slider.animate({"left": "0px"}, 100);
 
         isSpetrogramShow = false;
+        cv.Resize([0, -1.2], [WINDOW_LENGTH, 1.2], WINDOW_LENGTH, 200); // oscillator
         // $("#spectrogram").fadeOut();
 
         $("#canvasSwitch").attr("data-state", "0");
@@ -220,7 +224,7 @@ $("#canvasSwitch").click(() => {
         slider.animate({"left": "16px"}, 100);
 
         isSpetrogramShow = true;
-        cv.Reset([0, -1.2], [WINDOW_LENGTH, 1.2]);
+        cv.Resize([0, 0], [WINDOW_LENGTH_HALF, WINDOW_LENGTH_HALF], SPECTROGRAM_BUFFER_LENGTH, WINDOW_LENGTH_HALF); // oscillator
         // $("#spectrogram").fadeIn();
 
         $("#canvasSwitch").attr("data-state", "1");
