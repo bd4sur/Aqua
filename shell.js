@@ -18,17 +18,8 @@ let isSpetrogramShow = false;
 
 let cv = SpectrogramInit("spectrogram");
 
-$("#fileSelector").change(() => {
-
-    // 获取文件名
-    let fakepath = $("#fileSelector").val().split(/\\|\//gi);
-    let filename = fakepath[fakepath.length - 1];
-    $("#inputButtonLabel").html(filename);
-
-    // 读取文件
-    let file = fileSelector.files[0];
-    let Reader = new FileReader();
-    Reader.onloadend = () => {
+function readerOnLoad(reader, filename) {
+    return () => {
         $("#play").removeAttr("disabled");
         $("#play").unbind("click"); // 删除旧的事件处理函数，以应对重复选择文件的情况
         $("#play").click(() => {
@@ -45,7 +36,7 @@ $("#fileSelector").change(() => {
                         $("#play").removeClass("PlayButton");
                         $("#play").addClass("ProcessbarContainer");
 
-                        decode(Reader.result, filename);
+                        decode(reader.result, filename);
 
                         $("#play").attr("data-state", "playing");
 
@@ -53,7 +44,31 @@ $("#fileSelector").change(() => {
                 });
             }
         });
-    }
+    };
+}
+
+$("#fileSelector").on("dragover", (event) => {
+    event.preventDefault();
+}).on("drop", (event) => {
+    event.preventDefault();
+    let filelist = event.originalEvent.dataTransfer.files;
+    let file = filelist[0];
+    let filename = file.name;
+    $("#inputButtonLabel").html(filename);
+    let Reader = new FileReader();
+    Reader.onloadend = readerOnLoad(Reader, filename);
+    Reader.readAsArrayBuffer(file);
+});
+
+$("#fileSelector").change(() => {
+    // 获取文件名
+    let fakepath = $("#fileSelector").val().split(/\\|\//gi);
+    let filename = fakepath[fakepath.length - 1];
+    $("#inputButtonLabel").html(filename);
+    // 读取文件
+    let file = fileSelector.files[0];
+    let Reader = new FileReader();
+    Reader.onloadend = readerOnLoad(Reader, filename);
     Reader.readAsArrayBuffer(file);
 });
 
