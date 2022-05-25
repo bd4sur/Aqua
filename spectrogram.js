@@ -158,8 +158,9 @@ function dB2Color(dB) {
     const MAX = 255;
 
     let ratio = (dB - MIN) / (MAX - MIN);
+    ratio = ratio * ratio; // 优化颜色分布
     let hue, v;
-    const threshold = 0.12;
+    const threshold = 0.14;
     if(ratio < threshold) {
         v = 1 - (threshold - ratio) / threshold;
         hue = (1 - threshold) * (1 - threshold) * 360;
