@@ -3,27 +3,19 @@
 
 ------
 
-MPEG-1 Audio Layer 3 (MP3) 音频编码器。依据 ISO/IEC 11172-3 及其配套的示例代码“dist10”实现。
+An experimental MP3 encoder. **DO NOT USE THIS ENCODER FOR SERIOUS PURPOSES! (e.g. archiving, broadcasting, etc.)**
 
-本编码器仅供作者个人学习研究，请勿用于正式的（尤其是以存档为目的的）音频编码工作。请务必使用LAME等成熟的编码器。
+实验性 MPEG-1 Audio Layer 3 (MP3) 音频编码器。依据 ISO/IEC 11172-3 及其配套的示例代码“dist10”实现，用于MP3编码算法学习、验证。本系统不含解码器。
 
-**▶ [可视化演示](https://bd4sur.com/Aqua/index.html)**
+**警示：本编码器仅供作者个人学习研究，并不成熟可靠，请勿用于严肃的音频编码任务，如音频存档、正式广播等。请务必使用ffmpeg、LAME等成熟的编码器。**
+
+**▶ [可视化交互原型](https://bd4sur.com/Aqua/index.html)**
 
 ## 特性规划
 
-计划开发的特性：
+计划开发的特性：第二心理声学模型、联合立体声。
 
-- 第二心理声学模型
-- 联合立体声
-
-暂不实现的特性：
-
-- 混合块
-- 尺度因子预测（即scfsi）
-- 低采样率支持（MPEG-2标准）
-- VBR（非标准）
-- ID3标签（非标准）
-- 回放增益（非标准）
+暂不实现的特性：混合块、尺度因子预测（即scfsi）、低采样率支持（MPEG-2标准）、VBR（非标准）、ID3标签（非标准）、回放增益（非标准）等等。
 
 ## 开发进度
 
@@ -62,7 +54,7 @@ MPEG-1 Audio Layer 3 (MP3) 音频编码器。依据 ISO/IEC 11172-3 及其配套
 
 ## 权利声明
 
-版权所有 © 2019 BD4SUR@GitHub，保留所有权利。
+版权所有 © 2019~2022 BD4SUR，保留所有权利。
 
 采用MIT协议授权。
 
