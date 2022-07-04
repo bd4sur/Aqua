@@ -1,0 +1,22 @@
+{
+    "compilerOptions": {
+        "target": "ES6",
+        "module": "amd",
+        "allowJs": true,
+        "outFile": "app.js"
+    },
+    "files": [
+        "common.js",
+        "fft.js",
+        "psy.js",
+        "subband_filter.js",
+        "huffman.js",
+        "mdct.js",
+        "reservoir.js",
+        "qloop.js",
+        "stream.js",
+        "decoder.js",
+        "main.js",
+        "node_main.js"
+    ]
+}

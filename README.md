@@ -42,6 +42,13 @@ An experimental MP3 encoder. **DO NOT USE THIS ENCODER FOR SERIOUS PURPOSES! (e.
 |进行中|实现第二心理声学模型和高频预加重|
 |进行中|完善文档和笔记；处理掉所有TODO|
 
+## 构建、运行
+
+```
+npx tsc
+node app.js
+```
+
 ## 可视化
 
 - [分析子带滤波器组](https://bd4sur.com/Aqua/demo/Filterbank.html)

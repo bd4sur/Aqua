@@ -13,7 +13,7 @@
 /////////////////////////////////////////////////////////////////
 
 /**
- * @description 频谱平坦度，用于计算量化步长初值
+ * @description 频谱平坦度，用于计算量化步长初值 Ref: https://en.wikipedia.org/wiki/Spectral_flatness , doi:10.1109/lsp.2004.831663
  */
 function SFM(xr576) {
     let temp1 = 0, temp2 = 0;
