@@ -3526,9 +3526,7 @@ function HuffmanDecode(bitstr, /* 哈夫曼编码的比特串 */ blockType, /* �
 //
 /////////////////////////////////////////////////////////////////
 /////////////////////////////////////////////////////////////////
-//
-//  编 码 器 入 口
-//
+//  编码器入口（异步，用于Web浏览器）
 /////////////////////////////////////////////////////////////////
 function Aqua_Main(PCM_left, PCM_right, channels, sampleRate, bitRate, onRunning, onFinished) {
     // 编码器初始化
@@ -3571,9 +3569,41 @@ function Aqua_Main(PCM_left, PCM_right, channels, sampleRate, bitRate, onRunning
                 frameNumber: frameNumber,
                 byteStream: byteStream
             });
+            return byteStream;
         }
     }, 0);
 }
+/////////////////////////////////////////////////////////////////
+//  编码器入口（同步，用于后端）
+/////////////////////////////////////////////////////////////////
+function Aqua_Main_Sync(PCM_left, PCM_right, channels, sampleRate, bitRate) {
+    // 编码器初始化
+    Aqua_Init(channels, sampleRate, bitRate);
+    let frameNumber = Math.ceil(PCM_left.length / 1152);
+    console.log(`预计帧数：${frameNumber}`);
+    let byteStream = new Array(); // 字节流
+    let offset = 0; // 采样计数
+    let frameCount = 0; // 帧计数
+    // 逐帧编码，将各帧连接起来
+    while (offset < PCM_left.length) {
+        // 编码从offset开始的一帧
+        let frame = Aqua_EncodeFrame([PCM_left, PCM_right], offset);
+        // 将当前帧的比特流拼接到现有比特流后面
+        let frameStream = frame.stream;
+        for (let i = 0; i < frameStream.length; i++) {
+            byteStream.push(frameStream[i]);
+        }
+        // 更新计数器
+        frameCount++;
+        offset += 1152;
+    }
+    return byteStream;
+}
+/////////////////////////////////////////////////////////////////
+//
+//  编 码 器 初 始 化
+//
+/////////////////////////////////////////////////////////////////
 function Aqua_Init(channels, sampleRate, bitRate) {
     // 首先设置声道数、采样率和比特率
     switch (channels) {
@@ -3807,4 +3837,106 @@ const onFinished = (info) => {
     let buffer = new Uint8Array(byteStream);
     fs.writeFileSync("E:/Desktop/test.mp3", buffer, { "flag": "w" });
 };
-Aqua_Main(pcm_l, pcm_r, 2, 48000, 320000, onRunning, onFinished);
+// Aqua_Main(pcm_l, pcm_r, 2, 48000, 320000, onRunning, onFinished);
+// Uint16（大端）序列 转换为 浮点数组
+function Uint16_to_Floats(data) {
+    function shortToFloat(byte_MSB, byte_LSB) {
+        return (((byte_MSB << 8) | byte_LSB) / 32768 - 1);
+    }
+    let samples = [];
+    for (let i = 0; i < data.length; i += 2) {
+        let byte_MSB = data[i];
+        let byte_LSB = data[i + 1];
+        let fvalue = shortToFloat(byte_MSB, byte_LSB);
+        samples.push(fvalue);
+    }
+    return samples;
+}
+// 浮点数组 转换为 Uint16（大端）序列（字节流）
+function Floats_to_Uint16(samples) {
+    function floatToShort(fvalue) {
+        let i16value = (((fvalue + 1) * 32768) | 0);
+        return [((i16value >> 8) & 255), (i16value & 255)];
+    }
+    let bytes = [];
+    for (let i = 0; i < samples.length; i++) {
+        let fvalue = samples[i];
+        let svalue = floatToShort(fvalue);
+        bytes.push(svalue[0]); // MSB
+        bytes.push(svalue[1]); // LSB
+    }
+    return bytes;
+}
+const net = require('net');
+const PCM_PORT = 9000;
+const MP3_PORT = 9001;
+const GR_HOST = "192.168.10.150";
+const AQUA_HOST = "192.168.10.20";
+let client = null;
+let isGrStarted = false;
+// 建立TCP连接
+function ClientInit(host, port) {
+    client = net.connect(port, host, () => {
+        console.log(`[Aqua-Client] Client connected`);
+    });
+    client.on("data", (data) => {
+        console.log(`[Aqua-Client] Response from GR: ${data}`);
+    });
+    client.on("end", () => {
+        console.log(`[Aqua-Client] Client end`);
+    });
+    client.on("error", (err) => {
+        console.error(err);
+    });
+    client.on("close", () => {
+        console.log("[Aqua-Client] Client closed");
+        process.exit(0);
+    });
+}
+let byteFIFO = [];
+// 接收输入的PCM流
+const server = net.createServer((socket) => {
+    // socket.setEncoding("binary");
+    socket.on("data", (buf) => {
+        if (isGrStarted === false) {
+            ClientInit(GR_HOST, MP3_PORT);
+            isGrStarted = true;
+        }
+        console.log(`[Aqua-Server] Received PCM data from GR`);
+        // 取出字节流，进入队列
+        // let bytes = [...buf];
+        for (const b of buf) {
+            byteFIFO.push(b);
+        }
+        // 检查队列状态
+        let byteFifoLength = byteFIFO.length;
+        if ((byteFifoLength > 1152 * 100) && (byteFifoLength % 2 === 0)) {
+            // TODO 需要对齐uint16的边界（如何对齐？），若没有对齐，会导致PCM浮点采样完全混乱。
+            // NOTE MTU的间断会导致PCM也间断，如何拼接起来，需要考虑。设计上层协议？
+            let pcm = Uint16_to_Floats(byteFIFO);
+            // 执行编码（左右声道相同）
+            let mp3_bytestream = Aqua_Main_Sync(pcm, pcm, 2, 48000, 320000);
+            console.log(`编码完成，字节长度：${mp3_bytestream.length}`);
+            let buffer = new Uint8Array(mp3_bytestream);
+            fs.writeFileSync("E:/Desktop/test.mp3", buffer, { "flag": "w" });
+            // 通过MP3_PORT返回数据
+            client.write(Buffer.from("bytes"));
+            byteFIFO = [];
+        }
+        else {
+            console.log(`FIFO.length = ${byteFIFO.length} 未满，等待`);
+        }
+    });
+    socket.on("end", () => {
+        console.log("[Aqua-Server] Server end");
+    });
+    socket.on("error", (err) => {
+        console.error(err);
+    });
+});
+server.on("error", (err) => {
+    console.error(err);
+});
+server.listen(PCM_PORT, AQUA_HOST, () => {
+    console.log(`[Aqua-Server] Start listening ${AQUA_HOST}:${PCM_PORT}`);
+});

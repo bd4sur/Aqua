@@ -14,9 +14,7 @@
 
 
 /////////////////////////////////////////////////////////////////
-//
-//  编 码 器 入 口
-//
+//  编码器入口（异步，用于Web浏览器）
 /////////////////////////////////////////////////////////////////
 
 function Aqua_Main(PCM_left, PCM_right, channels, sampleRate, bitRate, onRunning, onFinished) {
@@ -75,10 +73,51 @@ function Aqua_Main(PCM_left, PCM_right, channels, sampleRate, bitRate, onRunning
                 byteStream: byteStream
             });
 
+            return byteStream;
         }
     }, 0);
 }
 
+/////////////////////////////////////////////////////////////////
+//  编码器入口（同步，用于后端）
+/////////////////////////////////////////////////////////////////
+
+function Aqua_Main_Sync(PCM_left, PCM_right, channels, sampleRate, bitRate) {
+    // 编码器初始化
+    Aqua_Init(channels, sampleRate, bitRate);
+
+    let frameNumber = Math.ceil(PCM_left.length / 1152);
+    console.log(`预计帧数：${frameNumber}`);
+
+    let byteStream = new Array(); // 字节流
+
+    let offset = 0;     // 采样计数
+    let frameCount = 0; // 帧计数
+
+    // 逐帧编码，将各帧连接起来
+    while(offset < PCM_left.length) {
+
+        // 编码从offset开始的一帧
+        let frame = Aqua_EncodeFrame([PCM_left, PCM_right], offset);
+
+        // 将当前帧的比特流拼接到现有比特流后面
+        let frameStream = frame.stream;
+        for(let i = 0; i < frameStream.length; i++) {
+            byteStream.push(frameStream[i]);
+        }
+
+        // 更新计数器
+        frameCount++;
+        offset += 1152;
+    }
+    return byteStream;
+}
+
+/////////////////////////////////////////////////////////////////
+//
+//  编 码 器 初 始 化
+//
+/////////////////////////////////////////////////////////////////
 
 function Aqua_Init(channels, sampleRate, bitRate) {
 
