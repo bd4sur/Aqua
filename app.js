@@ -2952,7 +2952,7 @@ function InnerLoop(Spectrum, blockType, bitRateLimit) {
     //      但是这里考虑到性能，采取了一个较小的值。如果以后测试出问题，将继续修改这个参数。
     //      简单解释：所谓准静音，指的是幅度非常小、频谱平坦度又较高的片段，例如乐曲开始前或结束后的静音。由于频谱平坦度较高，初始量化步长较大，再加上
     //               本身幅度较小，因而量化噪音很容易超出掩蔽阈值和/或听阈，导致产生可闻量化噪声。所以，解决的办法就是尽可能减小量化初值。
-    let quantanf = -100; // Math.round(8 * Math.log(SFM(spectrum576))) - 50;
+    let quantanf = Math.round(8 * Math.log(SFM(spectrum576))) - 50;
     for (let qquant = 0; qquant < 256; qquant++) { // global_gain为8bit
         // 量化
         let quantizedSpectrum576 = Quantize(spectrum576, (quantanf + qquant));
@@ -3827,7 +3827,7 @@ for (let i = 0; i < 1152 * 100; i++) {
     pcm_r[i] = Math.sin(i / 10);
 }
 const onRunning = (info) => {
-    console.log(info.frameCount);
+    Aqua_Log(info.frameCount);
 };
 const onFinished = (info) => {
     let byteStream = info.byteStream;
@@ -3835,6 +3835,10 @@ const onFinished = (info) => {
     fs.writeFileSync("E:/Desktop/test.mp3", buffer, { "flag": "w" });
 };
 // Aqua_Main(pcm_l, pcm_r, 2, 48000, 320000, onRunning, onFinished);
+// 为了支援MP3字节流通过stdout输出，需要将console.log封装起来，按需屏蔽
+function Aqua_Log(msg) {
+    // console.log(msg);
+}
 // Uint16（大端）序列 转换为 浮点数组
 function Uint16_to_Floats(data) {
     function shortToFloat(byte_MSB, byte_LSB) {
@@ -3874,19 +3878,19 @@ let isGrStarted = false;
 // 建立TCP连接
 function ClientInit(host, port) {
     client = net.connect(port, host, () => {
-        console.log(`[Aqua-Client] Client connected`);
+        Aqua_Log(`[Aqua-Client] Client connected`);
     });
     client.on("data", (data) => {
-        console.log(`[Aqua-Client] Response from GR: ${data}`);
+        Aqua_Log(`[Aqua-Client] Response from GR: ${data}`);
     });
     client.on("end", () => {
-        console.log(`[Aqua-Client] Client end`);
+        Aqua_Log(`[Aqua-Client] Client end`);
     });
     client.on("error", (err) => {
         console.error(err);
     });
     client.on("close", () => {
-        console.log("[Aqua-Client] Client closed");
+        Aqua_Log("[Aqua-Client] Client closed");
         process.exit(0);
     });
 }
@@ -3894,7 +3898,6 @@ let byteFIFO = [];
 // 编码器初始化
 Aqua_Init(2, 48000, 320000);
 let byteStream = new Array(); // 字节流
-let offset = 0; // 采样计数
 let frameCount = 0; // 帧计数
 let prev_pcm_l = []; // 上一帧PCM（重叠）
 let prev_pcm_r = []; // 上一帧PCM（重叠）
@@ -3906,7 +3909,7 @@ const server = net.createServer((socket) => {
             ClientInit(GR_HOST, MP3_PORT);
             isGrStarted = true;
         }
-        console.log(`[Aqua-Server] Received PCM data from GR. Buffer=${buf.length}  byteFIFO=${byteFIFO.length}`);
+        Aqua_Log(`[Aqua-Server] Received PCM data from GR. Buffer=${buf.length}  byteFIFO=${byteFIFO.length}`);
         // 取出字节流，进入队列
         // let bytes = [...buf];
         for (const b of buf) {
@@ -3920,7 +3923,7 @@ const server = net.createServer((socket) => {
                 for (let i = 0; i < 2304; i++) {
                     pcmFrameBytes.push(byteFIFO.shift());
                 }
-                // 转换为1152个float
+                // 转换为1152个float（适当衰减一些，防止编码有误 TODO 需要改进PCM流的二进制编码）
                 let pcm_l = Uint16_to_Floats(pcmFrameBytes);
                 let pcm_r = Uint16_to_Floats(pcmFrameBytes);
                 // 将当前帧与上一帧拼接起来，连续两帧PCM输入编码器，而编码器的offset设置为1152，即第二帧的开头
@@ -3936,26 +3939,27 @@ const server = net.createServer((socket) => {
                 }
                 // 通过MP3_PORT返回数据
                 // client.write(Buffer.from("bytes"));
+                process.stdout.write(Uint8Array.from(mp3FrameBytes));
                 // 保存当前帧，以便与下一帧拼接起来
                 prev_pcm_l = pcm_l;
                 prev_pcm_r = pcm_r;
                 frameCount++;
-                console.log(`已编码 ${frameCount} 帧`);
+                Aqua_Log(`[Aqua-Server] ${frameCount} frames encoded`);
             } while (byteFIFO.length > 2304);
         }
         else {
-            console.log(`FIFO.length = ${byteFIFO.length} 未满，等待`);
+            Aqua_Log(`[Aqua-Server] waiting for FIFO fulfilled (${byteFIFO.length})`);
         }
         // 输出到文件以供调试
+        const mp3_filepath = `E:/Desktop/test.mp3`;
         if (frameCount > 1000) {
-            console.log(`MP3写入文件`);
-            let buffer = new Uint8Array(byteStream);
-            fs.writeFileSync("E:/Desktop/test.mp3", buffer, { "flag": "w" });
+            fs.writeFileSync(mp3_filepath, new Uint8Array(byteStream), { "flag": "w" });
+            Aqua_Log(`[Aqua-Server] MP3 written to file "${mp3_filepath}"`);
             process.exit(0);
         }
     });
     socket.on("end", () => {
-        console.log("[Aqua-Server] Server end");
+        Aqua_Log("[Aqua-Server] Server end");
     });
     socket.on("error", (err) => {
         console.error(err);
@@ -3965,5 +3969,5 @@ server.on("error", (err) => {
     console.error(err);
 });
 server.listen(PCM_PORT, AQUA_HOST, () => {
-    console.log(`[Aqua-Server] Start listening ${AQUA_HOST}:${PCM_PORT}`);
+    Aqua_Log(`[Aqua-Server] Start listening ${AQUA_HOST}:${PCM_PORT}`);
 });
