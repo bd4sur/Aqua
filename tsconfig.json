@@ -3,7 +3,7 @@
         "target": "ES6",
         "module": "amd",
         "allowJs": true,
-        "outFile": "app.js"
+        "outFile": "aqua.js"
     },
     "files": [
         "common.js",

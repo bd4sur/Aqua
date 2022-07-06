@@ -41,9 +41,19 @@ An experimental MP3 encoder. **DO NOT USE THIS ENCODER FOR SERIOUS PURPOSES! (e.
 
 ## 构建、运行
 
+GR音频PCM源 → GR浮点PCM编码为PDU → GR_TCP_Client
+
+Aqua_TCP_Server → MP3_Encoder → stdout → lame解码 → aplay播放
+
+Aqua_TCP_Server → MP3_Encoder → Aqua_TCP_Client
+
+GR_TCP_Server → GR_QPSK_Transmitter
+
+GR_QPSK_Reveiver → FIFO/Pipe → lame解码 → aplay播放
+
 ```
 npx tsc
-node app.js
+node aqua.js | lame --decode --mp3input - - | aplay -
 ```
 
 ## 可视化
