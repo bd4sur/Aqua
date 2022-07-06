@@ -100,6 +100,14 @@ function ClientInit(host, port) {
 
 let byteFIFO = [];
 
+// 编码器初始化
+Aqua_Init(2, 48000, 320000);
+let byteStream = new Array(); // 字节流
+let frameCount = 0;           // 帧计数
+
+let prev_pcm_l = []; // 上一帧PCM（重叠）
+let prev_pcm_r = []; // 上一帧PCM（重叠）
+
 // 接收输入的PCM流
 const server = net.createServer((socket) => {
     // socket.setEncoding("binary");
@@ -108,7 +116,7 @@ const server = net.createServer((socket) => {
             ClientInit(GR_HOST, MP3_PORT);
             isGrStarted = true;
         }
-        console.log(`[Aqua-Server] Received PCM data from GR`);
+        console.log(`[Aqua-Server] Received PCM data from GR. Buffer=${buf.length}  byteFIFO=${byteFIFO.length}`);
 
         // 取出字节流，进入队列
         // let bytes = [...buf];
@@ -117,26 +125,50 @@ const server = net.createServer((socket) => {
         }
 
         // 检查队列状态
-        let byteFifoLength = byteFIFO.length;
-        if((byteFifoLength > 1152 * 100) && (byteFifoLength % 2 === 0)) {
-            // TODO 需要对齐uint16的边界（如何对齐？），若没有对齐，会导致PCM浮点采样完全混乱。
-            // NOTE MTU的间断会导致PCM也间断，如何拼接起来，需要考虑。设计上层协议？
-            let pcm = Uint16_to_Floats(byteFIFO);
-            // 执行编码（左右声道相同）
-            let mp3_bytestream = Aqua_Main_Sync(pcm, pcm, 2, 48000, 320000);
-            console.log(`编码完成，字节长度：${mp3_bytestream.length}`);
+        if(byteFIFO.length > 2304) { // 每个采样用一个Uint16（2Bytes）代替，每帧1152个采样，即2304个Bytes
+            do {
+                // 取出1帧（1152个采样，即2304个byte）进行编码
+                let pcmFrameBytes = [];
+                for(let i = 0; i < 2304; i++) {
+                    pcmFrameBytes.push(byteFIFO.shift());
+                }
+                // 转换为1152个float
+                let pcm_l = Uint16_to_Floats(pcmFrameBytes);
+                let pcm_r = Uint16_to_Floats(pcmFrameBytes);
+                // 将当前帧与上一帧拼接起来，连续两帧PCM输入编码器，而编码器的offset设置为1152，即第二帧的开头
+                // NOTE 之所以这样做，是因为分析子带滤波器的滑动窗口会滑到当前帧的前面去，所以一定要把前一帧也带上。
+                let overlapped_pcm_l = prev_pcm_l.concat(pcm_l);
+                let overlapped_pcm_r = prev_pcm_r.concat(pcm_r);
+                // 编码一帧（offset设为第二帧开头，理由在上面）
+                let mp3Frame = Aqua_EncodeFrame([overlapped_pcm_l, overlapped_pcm_r], 1152);
+                // 追加到字节流
+                let mp3FrameBytes = mp3Frame.stream;
+                for(let i = 0; i < mp3FrameBytes.length; i++) {
+                    byteStream.push(mp3FrameBytes[i]);
+                }
+                // 通过MP3_PORT返回数据
+                // client.write(Buffer.from("bytes"));
+                // 保存当前帧，以便与下一帧拼接起来
+                prev_pcm_l = pcm_l;
+                prev_pcm_r = pcm_r;
 
-            // 输出到文件以供调试
-            let buffer = new Uint8Array(mp3_bytestream);
-            fs.writeFileSync("E:/Desktop/test.mp3", buffer, {"flag": "w"});
-
-            // 通过MP3_PORT返回数据
-            client.write(Buffer.from("bytes"));
-            byteFIFO = [];
+                frameCount++;
+                console.log(`已编码 ${frameCount} 帧`);
+            }
+            while(byteFIFO.length > 2304);
         }
         else {
             console.log(`FIFO.length = ${byteFIFO.length} 未满，等待`);
         }
+
+        // 输出到文件以供调试
+        if(frameCount > 1000) {
+            console.log(`MP3写入文件`);
+            let buffer = new Uint8Array(byteStream);
+            fs.writeFileSync("E:/Desktop/test.mp3", buffer, {"flag": "w"});
+            process.exit(0);
+        }
+
     });
     socket.on("end", () => {
         console.log("[Aqua-Server] Server end");

@@ -92,7 +92,6 @@ function Aqua_Main_Sync(PCM_left, PCM_right, channels, sampleRate, bitRate) {
     let byteStream = new Array(); // 字节流
 
     let offset = 0;     // 采样计数
-    let frameCount = 0; // 帧计数
 
     // 逐帧编码，将各帧连接起来
     while(offset < PCM_left.length) {
@@ -106,8 +105,6 @@ function Aqua_Main_Sync(PCM_left, PCM_right, channels, sampleRate, bitRate) {
             byteStream.push(frameStream[i]);
         }
 
-        // 更新计数器
-        frameCount++;
         offset += 1152;
     }
     return byteStream;
