@@ -26,7 +26,7 @@ const onFinished = (info) => {
 
 // 为了支援MP3字节流通过stdout输出，需要将console.log封装起来，按需屏蔽
 function Aqua_Log(msg) {
-    // console.log(msg);
+    console.log(msg);
 }
 
 
@@ -73,7 +73,7 @@ const net = require('net');
 const PCM_PORT = 9000;
 const MP3_PORT = 9001;
 
-const GR_HOST = "192.168.10.150";
+const GR_HOST = "192.168.10.227";
 const AQUA_HOST = "192.168.10.20";
 
 let client = null;
@@ -103,7 +103,7 @@ function ClientInit(host, port) {
 let byteFIFO = [];
 
 // 编码器初始化
-Aqua_Init(2, 48000, 320000);
+Aqua_Init(2, 48000, 128000);
 let byteStream = new Array(); // 字节流
 let frameCount = 0;           // 帧计数
 
@@ -149,8 +149,8 @@ const server = net.createServer((socket) => {
                     byteStream.push(mp3FrameBytes[i]);
                 }
                 // 通过MP3_PORT返回数据
-                // client.write(Buffer.from("bytes"));
-                process.stdout.write(Uint8Array.from(mp3FrameBytes));
+                client.write(Uint8Array.from(mp3FrameBytes));
+                // process.stdout.write(Uint8Array.from(mp3FrameBytes));
                 // 保存当前帧，以便与下一帧拼接起来
                 prev_pcm_l = pcm_l;
                 prev_pcm_r = pcm_r;
@@ -165,12 +165,12 @@ const server = net.createServer((socket) => {
         }
 
         // 输出到文件以供调试
-        const mp3_filepath = `E:/Desktop/test.mp3`;
-        if(frameCount > 1000) {
-            fs.writeFileSync(mp3_filepath, new Uint8Array(byteStream), {"flag": "w"});
-            Aqua_Log(`[Aqua-Server] MP3 written to file "${mp3_filepath}"`);
-            process.exit(0);
-        }
+        // const mp3_filepath = `E:/Desktop/test.mp3`;
+        // if(frameCount > 1000) {
+        //     fs.writeFileSync(mp3_filepath, new Uint8Array(byteStream), {"flag": "w"});
+        //     Aqua_Log(`[Aqua-Server] MP3 written to file "${mp3_filepath}"`);
+        //     process.exit(0);
+        // }
 
     });
     socket.on("end", () => {
