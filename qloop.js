@@ -57,14 +57,14 @@ function Quantize(xr576, quantStep) {
     let ix576 = new Array();
     for(let i = 0; i < 576; i++) {
         let xr = xr576[i];
-        if(xr === 0) {
+        if(xr > 0) {
+            ix576[i] = Math.round(fastPower0p75(xr * INV_POWER_OF_ROOT_2_4[quantStep + 256]) - 0.0946);
+        }
+        else if(xr < 0) {
+            ix576[i] = -Math.round(fastPower0p75((-xr) * INV_POWER_OF_ROOT_2_4[quantStep + 256]) - 0.0946);
+        }
+        else if(xr === 0) {
             ix576[i] = 0;
-        }
-        else if(xr > 0) {
-            ix576[i] = Math.round(Math.pow((xr * INV_POWER_OF_ROOT_2_4[quantStep + 256]), 0.75) - 0.0946);
-        }
-        else {
-            ix576[i] = -Math.round(Math.pow(((-xr) * INV_POWER_OF_ROOT_2_4[quantStep + 256]), 0.75) - 0.0946);
         }
     }
     return ix576;
