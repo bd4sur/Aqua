@@ -192,6 +192,8 @@ function InnerLoop(Spectrum, blockType, bitRateLimit) {
     //      但是这里考虑到性能，采取了一个较小的值。如果以后测试出问题，将继续修改这个参数。
     //      简单解释：所谓准静音，指的是幅度非常小、频谱平坦度又较高的片段，例如乐曲开始前或结束后的静音。由于频谱平坦度较高，初始量化步长较大，再加上
     //               本身幅度较小，因而量化噪音很容易超出掩蔽阈值和/或听阈，导致产生可闻量化噪声。所以，解决的办法就是尽可能减小量化初值。
+    // NOTE 2022-07-05 通过正弦单音测试信号重新注意到这个问题：由于正弦单音信号的SFM非常小，再减去偏移值会使得量化步长过小，导致编码结果发生无法容忍的失真（并非噪声）。
+    //      初步测试发现，将quantanf设为固定值-100，效果似乎不错。quantanf是个关键参数，有必要继续研究。
     let quantanf = Math.round(8 * Math.log(SFM(spectrum576))) - 50;
 
     for(let qquant = 0; qquant < 256; qquant++) { // global_gain为8bit
@@ -287,7 +289,7 @@ function OuterLoop(
     isFinished[0] = false; isFinished[1] = false; isFinished[2] = false;
 
     while(outerLoopCount < 100) { // 超时控制
-        // LOG(`  外层循环第 ${outerLoopCount} 次`);
+        // Aqua_Log(`  外层循环第 ${outerLoopCount} 次`);
 
         // 缩放系数
 
@@ -297,7 +299,7 @@ function OuterLoop(
         // 【内层循环：码率控制循环】
 
         innerLoopOutput = InnerLoop(Spectrum, windowType, bitRateLimit);
-        // LOG(`    内层循环结束，量化步数：${innerLoopOutput.qquant}`);
+        // Aqua_Log(`    内层循环结束，量化步数：${innerLoopOutput.qquant}`);
 
         /////////////////////////////
         //  长 块
@@ -325,7 +327,7 @@ function OuterLoop(
                     }
                 }
             }
-            // LOG(`    已放大长块超限SFB：${sfbsOverXmin}`);
+            // Aqua_Log(`    已放大长块超限SFB：${sfbsOverXmin}`);
 
             // 【保存尺度因子】
 
@@ -393,7 +395,7 @@ function OuterLoop(
             for(let window = 0; window < 3; window++) {
                 // 跳过已经完成的子块
                 if(isFinished[window] === true) {
-                    // LOG(`    短块[${window}]已处理完毕，跳过。`);
+                    // Aqua_Log(`    短块[${window}]已处理完毕，跳过。`);
                     continue;
                 }
 
@@ -420,7 +422,7 @@ function OuterLoop(
                         }
                     }
                 }
-                // LOG(`    已放大短块[${window}]超限SFB：${sfbsOverXmin}`);
+                // Aqua_Log(`    已放大短块[${window}]超限SFB：${sfbsOverXmin}`);
 
                 // 【保存尺度因子】
 

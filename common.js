@@ -179,10 +179,11 @@ let CHANNELS = 2;
 //
 /////////////////////////////////////////////////////////////////
 
-function LOG(x) {
-    // console.log(x);
-}
 
+// 日志：为了支援MP3字节流通过stdout输出等目的，需要将console.log封装起来，按需屏蔽
+function Aqua_Log(x, isShow) {
+    if(isShow === true) console.log(x);
+}
 
 // 返回某正整数的指定长度的二进制串
 function BinaryString(intNumber, length) {

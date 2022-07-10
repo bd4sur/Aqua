@@ -259,7 +259,7 @@ function Aqua_EncodeFrame(PCMs, offset) {
 function EncodeGranule(PCMs, offset, meanBitsPerGranule) {
     let channels = new Array();
     for(let ch = 0; ch < CHANNELS; ch++) {
-        LOG(`【Channel ${ch}】`);
+        Aqua_Log(`【Channel ${ch}】`);
         let channel = EncodeChannel(PCMs[ch], offset, meanBitsPerGranule / CHANNELS, BUFFER[ch]);
         channels.push(channel);
     }
@@ -302,11 +302,11 @@ function EncodeChannel(PCM, offset, meanBitsPerChannel, buffer) {
     //  分 配 比 特 预 算
     //////////////////////////////////
 
-    // LOG(`当前比特储备：${RESERVOIR_SIZE}`);
+    // Aqua_Log(`当前比特储备：${RESERVOIR_SIZE}`);
     let budget = AllocateBudget(perceptualEntropy, meanBitsPerChannel);
-    // LOG(`当前Channel分配的比特预算（part2 & 3） = ${budget} bits`);
+    // Aqua_Log(`当前Channel分配的比特预算（part2 & 3） = ${budget} bits`);
     let huffmanBudget = budget - ((blockType !== WINDOW_SHORT) ? 74 : 126); // 假设尺度因子全满的情况下，扣除尺度因子所使用的比特，剩余的预算分配给part3（哈夫曼编码）
-    // LOG(`当前Channel分配的比特预算（only part3）= ${huffmanBudget} bits`);
+    // Aqua_Log(`当前Channel分配的比特预算（only part3）= ${huffmanBudget} bits`);
 
     //////////////////////////////////
     //  量 化 循 环
