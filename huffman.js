@@ -726,13 +726,16 @@ function HuffmanEncode(qspectrum576, blockType) {
         // 计算每个region的最大值，选取不同的Huffman编码表，保留码表编号到table_select
         let MaxValue0 = -1, MaxValue1 = -1, MaxValue2 = -1;
         for(let i = 0; i < region01; i++) {
-            if(Math.abs(qspectrum576[i]) > MaxValue0) { MaxValue0 = Math.abs(qspectrum576[i]); }
+            let qs_abs = Math.abs(qspectrum576[i]);
+            if(qs_abs > MaxValue0) { MaxValue0 = qs_abs; }
         }
         for(let i = region01; i < region12; i++) {
-            if(Math.abs(qspectrum576[i]) > MaxValue1) { MaxValue1 = Math.abs(qspectrum576[i]); }
+            let qs_abs = Math.abs(qspectrum576[i]);
+            if(qs_abs > MaxValue1) { MaxValue1 = qs_abs; }
         }
         for(let i = region12; i < BigvaluesPartition[1]; i++) {
-            if(Math.abs(qspectrum576[i]) > MaxValue2){ MaxValue2 = Math.abs(qspectrum576[i]); }
+            let qs_abs = Math.abs(qspectrum576[i]);
+            if(qs_abs > MaxValue2){ MaxValue2 = qs_abs; }
         }
 
         let tableSelect0 = -1, tableSelect1 = -1, tableSelect2 = -1;

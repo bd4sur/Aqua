@@ -172,7 +172,12 @@ function GranuleMDCT(currentGranuleSubbands, prevGranuleSubbands, windowType) {
             // MDCT
             let mdctOutput = MDCT(windowedMdctInput, 36);
             // 拼接到长块频谱上
-            LongBlockSpectrum = LongBlockSpectrum.concat(mdctOutput);
+            // LongBlockSpectrum = LongBlockSpectrum.concat(mdctOutput);
+            // 以下4行是上一行的优化实现
+            let mdctOutputLength = mdctOutput.length;
+            for(let i = 0; i < mdctOutputLength; i++) {
+                LongBlockSpectrum.push(mdctOutput[i]); // concat
+            }
         }
         // 对长块频谱作去混叠蝶形结运算
         let LongBlockSpectrumWithoutAliasing = ReduceAliasing(LongBlockSpectrum);
@@ -187,7 +192,17 @@ function GranuleMDCT(currentGranuleSubbands, prevGranuleSubbands, windowType) {
         for(let sbindex = 0; sbindex < 32; sbindex++) {
             let currentGranule = currentGranuleSubbands[sbindex];
             let prevGranule = prevGranuleSubbands[sbindex];
-            let frame = prevGranule.concat(currentGranule);
+            // let frame = prevGranule.concat(currentGranule);
+            // 以下9行是上一行的优化实现
+            let frame = [];
+            let prevGranuleLength = prevGranule.length;
+            let currentGranuleLength = currentGranule.length;
+            for(let i = 0; i < prevGranuleLength; i++) {
+                frame.push(prevGranule[i]); // concat
+            }
+            for(let i = 0; i < currentGranuleLength; i++) {
+                frame.push(currentGranule[i]); // concat
+            }
             // 处理三个按时间顺序排列的短块
             for(let shortBlockCount = 0; shortBlockCount < 3; shortBlockCount++) {
                 // 截取短块（长度为12）
@@ -199,7 +214,14 @@ function GranuleMDCT(currentGranuleSubbands, prevGranuleSubbands, windowType) {
                 }
                 let shortMdctOutput = MDCT(shortWindowedMdctInput, 12);
                 // 拼接到第 shortBlockCount 个短块频谱上
-                ShortBlockSpectrums[shortBlockCount] = ShortBlockSpectrums[shortBlockCount].concat(shortMdctOutput);
+                // ShortBlockSpectrums[shortBlockCount] = ShortBlockSpectrums[shortBlockCount].concat(shortMdctOutput);
+                // 以下6行是上一行的优化实现
+                let shortMdctOutputLength = shortMdctOutput.length;
+                let sbs = ShortBlockSpectrums[shortBlockCount];
+                for(let i = 0; i < shortMdctOutputLength; i++) {
+                    sbs.push(shortMdctOutput[i]);
+                }
+                ShortBlockSpectrums[shortBlockCount] = sbs; // concat
             }
         }
         return ShortBlockSpectrums;

@@ -38,10 +38,14 @@ function SFM(xr576) {
 function QuantNoise(xr, ix, quantStep, blockType) {
     let xfsf = new Array();
     let SFB = ScaleFactorBands[SAMPLE_RATE][blockType];
+    let power_of_root_2_4 = POWER_OF_ROOT_2_4[quantStep + 256];
     for(let sbindex = 0; sbindex < SFB.length; sbindex++) {
         let sum = 0;
         for(let i = SFB[sbindex][0]; i <= SFB[sbindex][1]; i++) {
-            let temp1 = (ix[i] === 0) ? Math.abs(xr[i]) : (Math.abs(xr[i]) - Math.pow(Math.abs(ix[i]), (4/3)) * POWER_OF_ROOT_2_4[quantStep + 256]); // NOTE 与标准原文的差异：给ix[i]加了绝对值
+            // NOTE 与标准原文的差异：给ix[i]加了绝对值
+            let temp1 = (ix[i] === 0) ?
+                        (xr[i] >= 0 ? xr[i] : -xr[i]) :
+                        ((xr[i] >= 0 ? xr[i] : -xr[i]) - Math.pow((ix[i] >= 0 ? ix[i] : -ix[i]), 1.3333333333333) * power_of_root_2_4);
             sum += (temp1 * temp1);
         }
         xfsf[sbindex] = sum / (SFB[sbindex][1] - SFB[sbindex][0] + 1); // NOTE 此处dist10与IS有出入，以dist10为准。
@@ -55,13 +59,18 @@ function QuantNoise(xr, ix, quantStep, blockType) {
  */
 function Quantize(xr576, quantStep) {
     let ix576 = new Array();
+    let inv_power_of_root_2_4 = INV_POWER_OF_ROOT_2_4[quantStep + 256];
     for(let i = 0; i < 576; i++) {
         let xr = xr576[i];
         if(xr > 0) {
-            ix576[i] = Math.round(fastPower0p75(xr * INV_POWER_OF_ROOT_2_4[quantStep + 256]) - 0.0946);
+            let a = fastPower0p75(xr * inv_power_of_root_2_4);
+            let b = (a + 0.4054) << 0; // NOTE 2022-07-10 a faster Math.round(a - 0.0946)
+            ix576[i] = b;
         }
         else if(xr < 0) {
-            ix576[i] = -Math.round(fastPower0p75((-xr) * INV_POWER_OF_ROOT_2_4[quantStep + 256]) - 0.0946);
+            let a = fastPower0p75((-xr) * inv_power_of_root_2_4);
+            let b = (a + 0.4054) << 0; // NOTE 2022-07-10 a faster Math.round(a - 0.0946)
+            ix576[i] = -b;
         }
         else if(xr === 0) {
             ix576[i] = 0;
