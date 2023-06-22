@@ -16,6 +16,16 @@ let AudioContext = new window.AudioContext();
 
 let isSpetrogramShow = false;
 
+// TODO IP参数
+let ws_ip_address = "localhost";
+let socket = null;
+socket = new WebSocket(`ws://${ws_ip_address}:5001/`);
+socket.binaryType = "arraybuffer";
+socket.addEventListener('open', (event) => {
+    console.log("WebSocket Opened");
+    // socket.send('Hello Server!');
+});
+
 let cv = SpectrogramInit("spectrogram");
 
 function readerOnLoad(reader, filename) {
@@ -161,6 +171,9 @@ function decode(rawAudioData, filename) {
         requestAnimationFrame(play);
 
         const onRunning = (info) => {
+            // 通过WebSocket发送MP3编码帧
+            if(socket.readyState === WebSocket.OPEN) socket.send(new Uint8Array(info.frame));
+
             let frameCount = info.frameCount;
             let frameNumber = info.frameNumber;
             let speed = info.speed;

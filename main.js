@@ -52,6 +52,7 @@ function Aqua_Main(PCM_left, PCM_right, channels, sampleRate, bitRate, onRunning
 
         // 编码结果可视化（onRunning）
         onRunning({
+            frame: frameStream,
             frameCount: frameCount,
             frameNumber: frameNumber,
             speed: speed,
