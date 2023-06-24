@@ -16,10 +16,13 @@ let AudioContext = new window.AudioContext();
 
 let isSpetrogramShow = false;
 
+let VIDEO_FRAMES = [];
+let audio_frame_clock = 0;
+
 // TODO IP参数
 let ws_ip_address = "localhost";
 let socket = null;
-socket = new WebSocket(`ws://${ws_ip_address}:5001/`);
+socket = new WebSocket(`ws://${ws_ip_address}:5000/`);
 socket.binaryType = "arraybuffer";
 socket.addEventListener('open', (event) => {
     console.log("WebSocket Opened");
@@ -79,6 +82,24 @@ $("#fileSelector").change(() => {
     let file = fileSelector.files[0];
     let Reader = new FileReader();
     Reader.onloadend = readerOnLoad(Reader, filename);
+    Reader.readAsArrayBuffer(file);
+});
+
+// 2023年6月：增加视频编码
+// 首先解析SV视频文件，得到所有的视频帧。SV文件由另外的工具预先生成，未来要考虑整合到这里。
+$("#videoFileSelector").change(() => {
+    // 获取文件名
+    let fakepath = $("#videoFileSelector").val().split(/\\|\//gi);
+    let filename = fakepath[fakepath.length - 1];
+    $("#inputButtonLabel").html(filename);
+    // 读取文件
+    let file = videoFileSelector.files[0];
+    let Reader = new FileReader();
+    Reader.onloadend = () => {
+        let bytestream = new Uint8Array(Reader.result);
+        VIDEO_FRAMES = parseVideoFile(bytestream);
+        console.log(VIDEO_FRAMES);
+    };
     Reader.readAsArrayBuffer(file);
 });
 
@@ -171,12 +192,33 @@ function decode(rawAudioData, filename) {
         requestAnimationFrame(play);
 
         const onRunning = (info) => {
-            // 通过WebSocket发送MP3编码帧
-            if(socket.readyState === WebSocket.OPEN) socket.send(new Uint8Array(info.frame));
 
             let frameCount = info.frameCount;
             let frameNumber = info.frameNumber;
             let speed = info.speed;
+
+            // 构建音频MCS帧
+            let mcs_frame_audio = mcs_encode(1, frameCount, info.frame);
+            // 组装MMS帧
+            let mms_frame = null;
+            if(need_next_video_frame(frameCount) === true) { // 取视频帧
+                // 构建视频MCS帧
+                let video_frame = VIDEO_FRAMES.shift(); // 从FIFO头部取出一个视频帧
+                let mcs_frame_video = mcs_encode(2, frameCount, video_frame);
+                mms_frame = mms_encode([mcs_frame_audio, mcs_frame_video]);
+            }
+            else {
+                mms_frame = mms_encode([mcs_frame_audio]);
+            }
+            // 将MMS帧拆分成IPA报文，发送出去
+            let ipa_packets = mms_frame_to_ipa_packets(mms_frame, 1000);
+            if(socket.readyState === WebSocket.OPEN) {
+                for(let i = 0; i < ipa_packets.length; i++) {
+                    let ipa_packet = ipa_packets[i];
+                    socket.send(new Uint8Array(ipa_packet)); // 通过WebSocket逐个发送IPA报文
+                    console.log("发送IPA报文");
+                }
+            }
 
             $("#timer").html(`${(frameCount / frameNumber * 100).toFixed(1)}% (${frameCount}/${frameNumber})`);
             $("#speed").html(`${speed}x`);
