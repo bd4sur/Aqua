@@ -19,13 +19,16 @@ let isSpetrogramShow = false;
 let VIDEO_FRAMES = [];
 let audio_frame_clock = 0;
 
+let ws_opened = false;
+
 // TODO IP参数
 let ws_ip_address = "localhost";
 let socket = null;
 socket = new WebSocket(`ws://${ws_ip_address}:5000/`);
 socket.binaryType = "arraybuffer";
 socket.addEventListener('open', (event) => {
-    console.log("WebSocket Opened");
+    $("#ws_status").html("WebSocket Opened");
+    ws_opened = true;
     // socket.send('Hello Server!');
 });
 
@@ -197,26 +200,33 @@ function decode(rawAudioData, filename) {
             let frameNumber = info.frameNumber;
             let speed = info.speed;
 
-            // 构建音频MCS帧
-            let mcs_frame_audio = mcs_encode(1, frameCount, info.frame);
-            // 组装MMS帧
-            let mms_frame = null;
-            if(need_next_video_frame(frameCount) === true) { // 取视频帧
-                // 构建视频MCS帧
-                let video_frame = VIDEO_FRAMES.shift(); // 从FIFO头部取出一个视频帧
-                let mcs_frame_video = mcs_encode(2, frameCount, video_frame);
-                mms_frame = mms_encode([mcs_frame_audio, mcs_frame_video]);
-            }
-            else {
-                mms_frame = mms_encode([mcs_frame_audio]);
-            }
-            // 将MMS帧拆分成IPA报文，发送出去
-            let ipa_packets = mms_frame_to_ipa_packets(mms_frame, 1000);
-            if(socket.readyState === WebSocket.OPEN) {
-                for(let i = 0; i < ipa_packets.length; i++) {
-                    let ipa_packet = ipa_packets[i];
-                    socket.send(new Uint8Array(ipa_packet)); // 通过WebSocket逐个发送IPA报文
-                    console.log("发送IPA报文");
+            if(ws_opened === true) {
+                // 构建音频MCS帧
+                let mcs_frame_audio = mcs_encode(1, frameCount, info.frame);
+                // 组装MMS帧
+                let mms_frame = null;
+                if(need_next_video_frame(frameCount) === true) { // 取视频帧
+                    // 构建视频MCS帧
+                    let video_frame = VIDEO_FRAMES.shift(); // 从FIFO头部取出一个视频帧
+                    if(video_frame === undefined) {
+                        mms_frame = mms_encode([mcs_frame_audio]);
+                    }
+                    else {
+                        let mcs_frame_video = mcs_encode(2, frameCount, video_frame);
+                        mms_frame = mms_encode([mcs_frame_audio, mcs_frame_video]);
+                    }
+                }
+                else {
+                    mms_frame = mms_encode([mcs_frame_audio]);
+                }
+                // 将MMS帧拆分成IPA报文，发送出去
+                let ipa_packets = mms_frame_to_ipa_packets(mms_frame, 1000);
+                if(socket.readyState === WebSocket.OPEN) {
+                    for(let i = 0; i < ipa_packets.length; i++) {
+                        let ipa_packet = new Uint8Array(ipa_packets[i]);
+                        socket.send(ipa_packet); // 通过WebSocket逐个发送IPA报文
+                        $("#ws_tx_status").html(`发送TNA报文，长度 ${ipa_packet.byteLength} Bytes`);
+                    }
                 }
             }
 
