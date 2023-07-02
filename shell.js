@@ -60,6 +60,9 @@ function readerOnLoad(reader, filename) {
 
                         // 定时发送NALU
                         setInterval(() => {
+                            if(NAL_PACKET_FIFO.length <= 0) {
+                                return;
+                            }
                             let nalu = NAL_PACKET_FIFO.shift();
                             socket.send(nalu); // 通过WebSocket逐个发送NAL报文
                             $("#ws_tx_status").html(`发送NALU，长度 ${nalu.byteLength} Bytes`);
