@@ -68,8 +68,8 @@ function mcs_encode(type, timestamp, payload) {
 
 
 
-// 构建MMS帧
-function mms_encode(mcs_frames) {
+// 构建CMS帧
+function cms_encode(mcs_frames) {
     let frame = [];
 
     // 首先计算所有mcs帧的总长度
@@ -95,45 +95,45 @@ function mms_encode(mcs_frames) {
 
 
 
-// IPA层编码解码
-// 将一个完整的MMS帧拆分成一组IPA报文，每个IPA报文的长度不超过mtu
-function mms_frame_to_ipa_packets(mms_frame, mtu) {
-    const ipa_sync_word = [66, 68, 52, 83, 85, 82, 0, 77]; // 同步字符串“BD4SUR\u0000M”
-    let ipa_packets = [];
+// NAL层编码解码
+// 将一个完整的CMS帧拆分成一组NAL报文，每个NAL报文的长度不超过mtu
+function cms_frame_to_nal_packets(cms_frame, mtu) {
+    const nal_sync_word = [66, 68, 52, 83, 85, 82, 0, 77]; // 同步字符串“BD4SUR\u0000M”
+    let nal_packets = [];
 
-    let mms_frame_offset = 0;
+    let cms_frame_offset = 0;
 
-    let ipa_payload_max_length = Math.ceil(mms_frame.length / Math.ceil(mms_frame.length / (mtu - 12)));
+    let nal_payload_max_length = Math.ceil(cms_frame.length / Math.ceil(cms_frame.length / (mtu - 12)));
 
-    let ipa_packet_index = 0;
+    let nal_packet_index = 0;
 
-    while(mms_frame_offset < mms_frame.length) {
-        let ipa_packet = [];
-        // ipa_sync_word (4B)
-        ipa_packet[0] = ipa_sync_word[0]; ipa_packet[1] = ipa_sync_word[1];
-        ipa_packet[2] = ipa_sync_word[2]; ipa_packet[3] = ipa_sync_word[3];
-        ipa_packet[4] = ipa_sync_word[4]; ipa_packet[5] = ipa_sync_word[5];
-        ipa_packet[6] = ipa_sync_word[6]; ipa_packet[7] = ipa_sync_word[7];
-        // ipa_packet_index (2B)
-        ipa_packet[8] = (((ipa_packet_index ^ 0) >> 8)  & 255);
-        ipa_packet[9] = ((ipa_packet_index ^ 0) & 255);
-        // ipa_payload 先截取payload，然后计算其实际长度
-        let ipa_payload = mms_frame.slice(mms_frame_offset, mms_frame_offset + ipa_payload_max_length);
-        // ipa_payload_length (2B)
-        ipa_packet[10] = (((ipa_payload.length ^ 0) >> 8)  & 255);
-        ipa_packet[11] = ((ipa_payload.length ^ 0) & 255);
+    while(cms_frame_offset < cms_frame.length) {
+        let nal_packet = [];
+        // nal_sync_word (4B)
+        nal_packet[0] = nal_sync_word[0]; nal_packet[1] = nal_sync_word[1];
+        nal_packet[2] = nal_sync_word[2]; nal_packet[3] = nal_sync_word[3];
+        nal_packet[4] = nal_sync_word[4]; nal_packet[5] = nal_sync_word[5];
+        nal_packet[6] = nal_sync_word[6]; nal_packet[7] = nal_sync_word[7];
+        // nal_packet_index (2B)
+        nal_packet[8] = (((nal_packet_index ^ 0) >> 8)  & 255);
+        nal_packet[9] = ((nal_packet_index ^ 0) & 255);
+        // nal_payload 先截取payload，然后计算其实际长度
+        let nal_payload = cms_frame.slice(cms_frame_offset, cms_frame_offset + nal_payload_max_length);
+        // nal_payload_length (2B)
+        nal_packet[10] = (((nal_payload.length ^ 0) >> 8)  & 255);
+        nal_packet[11] = ((nal_payload.length ^ 0) & 255);
 
-        for(let i = 0; i < ipa_payload.length; i++) {
-            ipa_packet.push(ipa_payload[i]);
+        for(let i = 0; i < nal_payload.length; i++) {
+            nal_packet.push(nal_payload[i]);
         }
 
-        ipa_packets.push(ipa_packet);
+        nal_packets.push(nal_packet);
 
-        ipa_packet_index++;
-        mms_frame_offset += ipa_payload.length;
+        nal_packet_index++;
+        cms_frame_offset += nal_payload.length;
     }
 
-    return ipa_packets;
+    return nal_packets;
 }
 
 

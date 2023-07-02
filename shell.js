@@ -21,6 +21,8 @@ let audio_frame_clock = 0;
 
 let ws_opened = false;
 
+let NAL_PACKET_FIFO = [];
+
 // TODO IP参数
 let ws_ip_address = "localhost";
 let socket = null;
@@ -55,6 +57,13 @@ function readerOnLoad(reader, filename) {
                         decode(reader.result, filename);
 
                         $("#play").attr("data-state", "playing");
+
+                        // 定时发送NALU
+                        setInterval(() => {
+                            let nalu = NAL_PACKET_FIFO.shift();
+                            socket.send(nalu); // 通过WebSocket逐个发送NAL报文
+                            $("#ws_tx_status").html(`发送NALU，长度 ${nalu.byteLength} Bytes`);
+                        }, 7);
 
                     });
                 });
@@ -203,7 +212,7 @@ function decode(rawAudioData, filename) {
             if(ws_opened === true) {
                 // 构建音频MCS帧
                 let mcs_frame_audio = mcs_encode(1, frameCount, info.frame);
-                // 组装MMS帧
+                // 组装CMS帧
                 let mms_frame = null;
                 if(need_next_video_frame(frameCount) === true) { // 取视频帧
                     // 构建视频MCS帧
@@ -219,13 +228,12 @@ function decode(rawAudioData, filename) {
                 else {
                     mms_frame = mms_encode([mcs_frame_audio]);
                 }
-                // 将MMS帧拆分成IPA报文，发送出去
-                let ipa_packets = mms_frame_to_ipa_packets(mms_frame, 1000);
+                // 将CMS帧拆分成NAL报文，加入NAL_PACKET_FIFO
+                let nal_packets = mms_frame_to_nal_packets(mms_frame, 1000);
                 if(socket.readyState === WebSocket.OPEN) {
-                    for(let i = 0; i < ipa_packets.length; i++) {
-                        let ipa_packet = new Uint8Array(ipa_packets[i]);
-                        socket.send(ipa_packet); // 通过WebSocket逐个发送IPA报文
-                        $("#ws_tx_status").html(`发送TNA报文，长度 ${ipa_packet.byteLength} Bytes`);
+                    for(let i = 0; i < nal_packets.length; i++) {
+                        let nal_packet = new Uint8Array(nal_packets[i]);
+                        NAL_PACKET_FIFO.push(nal_packet);
                     }
                 }
             }
