@@ -78,7 +78,7 @@ function cms_encode(sce_frames) {
         payload_length += sce_frames[i].length;
     }
     // frame length 2B
-    let frame_length = payload_length + 4;
+    let frame_length = payload_length + 4 + 4; // Header 4B + checksum 4B
     frame[0] = (frame_length >> 8) & 255;
     frame[1] = frame_length & 255;
     // payload length 2B
@@ -88,6 +88,16 @@ function cms_encode(sce_frames) {
     for(let i = 0; i < sce_frames.length; i++) {
         frame = frame.concat(sce_frames[i]);
     }
+
+    // checksum
+    let checksum = 0;
+    for(let i = 0; i < frame.length; i++) {
+        checksum += frame[i];
+    }
+    frame.push((checksum >> 24) & 255);
+    frame.push((checksum >> 16) & 255);
+    frame.push((checksum >> 8) & 255);
+    frame.push(checksum & 255);
 
     return frame;
 }
