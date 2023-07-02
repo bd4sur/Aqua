@@ -213,26 +213,26 @@ function decode(rawAudioData, filename) {
             let speed = info.speed;
 
             if(ws_opened === true) {
-                // 构建音频MCS帧
-                let mcs_frame_audio = mcs_encode(1, frameCount, info.frame);
+                // 构建音频SCE帧
+                let sce_frame_audio = sce_encode(1, frameCount, info.frame);
                 // 组装CMS帧
-                let mms_frame = null;
+                let cms_frame = null;
                 if(need_next_video_frame(frameCount) === true) { // 取视频帧
-                    // 构建视频MCS帧
+                    // 构建视频SCE帧
                     let video_frame = VIDEO_FRAMES.shift(); // 从FIFO头部取出一个视频帧
                     if(video_frame === undefined) {
-                        mms_frame = mms_encode([mcs_frame_audio]);
+                        cms_frame = cms_encode([sce_frame_audio]);
                     }
                     else {
-                        let mcs_frame_video = mcs_encode(2, frameCount, video_frame);
-                        mms_frame = mms_encode([mcs_frame_audio, mcs_frame_video]);
+                        let sce_frame_video = sce_encode(2, frameCount, video_frame);
+                        cms_frame = cms_encode([sce_frame_audio, sce_frame_video]);
                     }
                 }
                 else {
-                    mms_frame = mms_encode([mcs_frame_audio]);
+                    cms_frame = cms_encode([sce_frame_audio]);
                 }
                 // 将CMS帧拆分成NAL报文，加入NAL_PACKET_FIFO
-                let nal_packets = mms_frame_to_nal_packets(mms_frame, 1000);
+                let nal_packets = cms_frame_to_nal_packets(cms_frame, 1000);
                 if(socket.readyState === WebSocket.OPEN) {
                     for(let i = 0; i < nal_packets.length; i++) {
                         let nal_packet = new Uint8Array(nal_packets[i]);

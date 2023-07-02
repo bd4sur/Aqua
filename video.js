@@ -40,8 +40,8 @@ function parseVideoFile(bytestream) {
 
 
 
-// 构建MCS帧
-function mcs_encode(type, timestamp, payload) {
+// 构建SCE帧
+function sce_encode(type, timestamp, payload) {
     let frame = [];
     // frame length 2B
     let frame_length = payload.length + 10;
@@ -69,13 +69,13 @@ function mcs_encode(type, timestamp, payload) {
 
 
 // 构建CMS帧
-function cms_encode(mcs_frames) {
+function cms_encode(sce_frames) {
     let frame = [];
 
-    // 首先计算所有mcs帧的总长度
+    // 首先计算所有sce帧的总长度
     let payload_length = 0;
-    for(let i = 0; i < mcs_frames.length; i++) {
-        payload_length += mcs_frames[i].length;
+    for(let i = 0; i < sce_frames.length; i++) {
+        payload_length += sce_frames[i].length;
     }
     // frame length 2B
     let frame_length = payload_length + 4;
@@ -85,8 +85,8 @@ function cms_encode(mcs_frames) {
     frame[2] = (payload_length >> 8) & 255;
     frame[3] = payload_length & 255;
     // payload
-    for(let i = 0; i < mcs_frames.length; i++) {
-        frame = frame.concat(mcs_frames[i]);
+    for(let i = 0; i < sce_frames.length; i++) {
+        frame = frame.concat(sce_frames[i]);
     }
 
     return frame;
