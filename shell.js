@@ -239,6 +239,7 @@ function decode(rawAudioData, filename) {
                     let nal_packet = new Uint8Array(nal_packets[i]);
                     NAL_PACKET_FIFO.push(nal_packet);
                 }
+                $("#nalu_fifo_length").html(`${NAL_PACKET_FIFO.length}`);
             }
 
             $("#timer").html(`${(frameCount / frameNumber * 100).toFixed(1)}% (${frameCount}/${frameNumber})`);
