@@ -63,9 +63,11 @@ function readerOnLoad(reader, filename) {
                             if(NAL_PACKET_FIFO.length <= 0) {
                                 return;
                             }
-                            let nalu = NAL_PACKET_FIFO.shift();
-                            socket.send(nalu); // 通过WebSocket逐个发送NAL报文
-                            $("#ws_tx_status").html(`发送NALU，长度 ${nalu.byteLength} Bytes`);
+                            if(socket.readyState === WebSocket.OPEN) {
+                                let nalu = NAL_PACKET_FIFO.shift();
+                                socket.send(nalu); // 通过WebSocket逐个发送NAL报文
+                                $("#ws_tx_status").html(`发送NALU，长度 ${nalu.byteLength} Bytes`);
+                            }
                         }, 7);
 
                     });
@@ -233,11 +235,9 @@ function decode(rawAudioData, filename) {
                 }
                 // 将CMS帧拆分成NAL报文，加入NAL_PACKET_FIFO
                 let nal_packets = cms_frame_to_nal_packets(cms_frame, 1000);
-                if(socket.readyState === WebSocket.OPEN) {
-                    for(let i = 0; i < nal_packets.length; i++) {
-                        let nal_packet = new Uint8Array(nal_packets[i]);
-                        NAL_PACKET_FIFO.push(nal_packet);
-                    }
+                for(let i = 0; i < nal_packets.length; i++) {
+                    let nal_packet = new Uint8Array(nal_packets[i]);
+                    NAL_PACKET_FIFO.push(nal_packet);
                 }
             }
 
