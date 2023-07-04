@@ -224,7 +224,7 @@ function decode(rawAudioData, filename) {
             $("#speed").html(`${speed}x`);
             $("#progressbar").css("width", `${(frameCount / frameNumber * 100).toFixed(2)}%`);
 
-            if(ws_opened === true) {
+            if(ws_opened === false) {
                 return;
             }
 
