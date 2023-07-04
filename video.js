@@ -39,9 +39,24 @@ function parseVideoFile(bytestream) {
 
 
 
+// 视频帧分片（简单拆分成n片，最后一片长度偏短，不填充）
+function video_frame_slice(vframe, n) {
+    let slice_length = Math.ceil(vframe.length / n);
+    let slices = [];
+    for(let i = 0; i < vframe.length; i += slice_length) {
+        let s = vframe.slice(i, i + slice_length);
+        slices.push(s);
+    }
+    return slices;
+}
+
+
+
+
+
 
 // 构建SCE帧
-function sce_encode(type, timestamp, payload) {
+function sce_encode(type, timestamp, slice_index, payload) {
     let frame = [];
     // frame length 2B
     let frame_length = payload.length + 10;
@@ -55,9 +70,9 @@ function sce_encode(type, timestamp, payload) {
     frame[5] = (timestamp >> 16) & 255;
     frame[6] = (timestamp >> 8) & 255;
     frame[7] = timestamp & 255;
-    // fragment offset 2B
-    frame[8] = 0;
-    frame[9] = 0;
+    // slice index 2B
+    frame[8] = (slice_index >> 8) & 255;
+    frame[9] = slice_index & 255;
     // payload
     frame = frame.concat(Array.from(payload));
 
@@ -166,4 +181,8 @@ function need_next_video_frame(audio_frame_index) {
     else {
         return false;
     }
+}
+// 是否是音频关键帧
+function is_special_critical_frame(audio_frame_index) {
+    return (audio_frame_index % 25 === 24);
 }

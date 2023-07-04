@@ -12,6 +12,8 @@
 //
 /////////////////////////////////////////////////////////////////
 
+const NALU_MTU = 1000; // NAL层最小传输单元长度
+
 let AudioContext = new window.AudioContext();
 
 let isSpetrogramShow = false;
@@ -22,6 +24,9 @@ let audio_frame_clock = 0;
 let ws_opened = false;
 
 let NAL_PACKET_FIFO = [];
+
+let VIDEO_SLICE_FIFO = [];
+let VIDEO_SLICE_COUNT = 0;
 
 // TODO IP参数
 let ws_ip_address = "localhost";
@@ -115,6 +120,7 @@ $("#videoFileSelector").change(() => {
     Reader.onloadend = () => {
         let bytestream = new Uint8Array(Reader.result);
         VIDEO_FRAMES = parseVideoFile(bytestream);
+        VIDEO_FRAMES.shift(); // NOTE 此处比较神秘。之所以要去掉第一帧，是因为音视频复用时，音频帧需要与时间上的**下一个**视频帧复用在一起，这样解码端才不会延迟一帧。
         console.log(VIDEO_FRAMES);
     };
     Reader.readAsArrayBuffer(file);
@@ -214,37 +220,84 @@ function decode(rawAudioData, filename) {
             let frameNumber = info.frameNumber;
             let speed = info.speed;
 
+            $("#timer").html(`${(frameCount / frameNumber * 100).toFixed(1)}% (${frameCount}/${frameNumber})`);
+            $("#speed").html(`${speed}x`);
+            $("#progressbar").css("width", `${(frameCount / frameNumber * 100).toFixed(2)}%`);
+
             if(ws_opened === true) {
-                // 构建音频SCE帧
-                let sce_frame_audio = sce_encode(1, frameCount, info.frame);
-                // 组装CMS帧
-                let cms_frame = null;
-                if(need_next_video_frame(frameCount) === true) { // 取视频帧
-                    // 构建视频SCE帧
-                    let video_frame = VIDEO_FRAMES.shift(); // 从FIFO头部取出一个视频帧
-                    if(video_frame === undefined) {
-                        cms_frame = cms_encode([sce_frame_audio]);
+                return;
+            }
+
+            let cms_frame = null;
+
+            // 构建音频SCE帧
+            let audio_sce_frame = sce_encode(1, frameCount, 0xffff, info.frame);
+            // 音视频码流复用（组装CMS帧）
+            // 关键帧检查：首先检查当前时刻是否应该取出视频帧
+            if(need_next_video_frame(frameCount) === true) {
+                // 判断当前时刻是否是特殊关键帧，如果是特殊关键帧，则切成5片；否则切成4片
+                let video_slice_number = (is_special_critical_frame(frameCount)) ? 5 : 4;
+                // 从FIFO头部取出一个视频帧
+                let video_frame = VIDEO_FRAMES.shift();
+                // 如果没有取出视频帧，说明FIFO饥饿，构建带填充的CMS帧
+                if(video_frame === undefined) {
+                    // TODO 以下是重复代码块
+                    // 随机填充数据，用以填充没有视频帧分片的CMS帧，使得平均码率稳定，进而使得音频帧在码流中均匀分布
+                    let random_padding = [];
+                    for(let i = 0; i < 2500; i++) { // TODO 平均每个视频帧分片为2500B，因此填充部分也是2500B
+                        random_padding[i] = Math.floor(Math.random() * 256);
                     }
-                    else {
-                        let sce_frame_video = sce_encode(2, frameCount, video_frame);
-                        cms_frame = cms_encode([sce_frame_audio, sce_frame_video]);
-                    }
+                    let padding_sce_frame = sce_encode(0, frameCount, 0xffff, random_padding);
+                    cms_frame = cms_encode([audio_sce_frame, padding_sce_frame]);
                 }
+                // 如果取出了视频帧，则对其进行分片
                 else {
-                    cms_frame = cms_encode([sce_frame_audio]);
+                    let slices = video_frame_slice(video_frame, video_slice_number);
+                    // 除第一个分片外，全部加入分片队列，供后续音频帧到来时复用
+                    for(let i = 1; i < video_slice_number; i++) {
+                        VIDEO_SLICE_FIFO.push(slices[i]);
+                    }
+                    // 将第一个分片与当前音频帧复用为CMS帧
+                    VIDEO_SLICE_COUNT = 0;
+                    let video_slice_sce_frame = sce_encode(2, frameCount, VIDEO_SLICE_COUNT, slices[0]);
+                    cms_frame = cms_encode([audio_sce_frame, video_slice_sce_frame]);
                 }
                 // 将CMS帧拆分成NAL报文，加入NAL_PACKET_FIFO
-                let nal_packets = cms_frame_to_nal_packets(cms_frame, 1000);
+                let nal_packets = cms_frame_to_nal_packets(cms_frame, NALU_MTU);
                 for(let i = 0; i < nal_packets.length; i++) {
                     let nal_packet = new Uint8Array(nal_packets[i]);
                     NAL_PACKET_FIFO.push(nal_packet);
                 }
                 $("#nalu_fifo_length").html(`${NAL_PACKET_FIFO.length}`);
             }
-
-            $("#timer").html(`${(frameCount / frameNumber * 100).toFixed(1)}% (${frameCount}/${frameNumber})`);
-            $("#speed").html(`${speed}x`);
-            $("#progressbar").css("width", `${(frameCount / frameNumber * 100).toFixed(2)}%`);
+            // 如果当前时刻不是关键帧
+            else {
+                // 从分片队列中取出一个分片。由于音视频帧率间的确定关系，TODO ？ 可以保证到下一个关键帧的时候，队列恰好被排空
+                let s = VIDEO_SLICE_FIFO.shift();
+                VIDEO_SLICE_COUNT++;
+                // 一般是没有视频的情况
+                if(s === undefined) {
+                    // 随机填充数据，用以填充没有视频帧分片的CMS帧，使得平均码率稳定，进而使得音频帧在码流中均匀分布
+                    let random_padding = [];
+                    for(let i = 0; i < 2500; i++) { // TODO 平均每个视频帧分片为2500B，因此填充部分也是2500B
+                        random_padding[i] = Math.floor(Math.random() * 256);
+                    }
+                    let padding_sce_frame = sce_encode(0, frameCount, 0xffff, random_padding);
+                    cms_frame = cms_encode([audio_sce_frame, padding_sce_frame]);
+                }
+                else {
+                    // 将刚刚取出的分片与当前音频帧复用为CMS帧，并拆分成NALU
+                    let video_slice_sce_frame = sce_encode(2, frameCount, VIDEO_SLICE_COUNT, s);
+                    cms_frame = cms_encode([audio_sce_frame, video_slice_sce_frame]);
+                }
+                // 将CMS帧拆分成NAL报文，加入NAL_PACKET_FIFO
+                let nal_packets = cms_frame_to_nal_packets(cms_frame, NALU_MTU);
+                for(let i = 0; i < nal_packets.length; i++) {
+                    let nal_packet = new Uint8Array(nal_packets[i]);
+                    NAL_PACKET_FIFO.push(nal_packet);
+                }
+                $("#nalu_fifo_length").html(`${NAL_PACKET_FIFO.length}`);
+            }
 
         };
 
