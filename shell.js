@@ -63,17 +63,16 @@ function readerOnLoad(reader, filename) {
 
                         $("#play").attr("data-state", "playing");
 
-                        // 定时发送NALU
+                        // 发送NALU
                         setInterval(() => {
                              // 通过WebSocket逐个发送NAL报文
-                             // 按照每个NALU长度MTU=1000B=8kb、实时播放所需最小码率为1200kbps计算，每20ms至少需要发送3个NALU
                             if(NAL_PACKET_FIFO.length >= 3 && socket.readyState === WebSocket.OPEN) {
                                 let nalu1 = NAL_PACKET_FIFO.shift(); socket.send(nalu1);
                                 let nalu2 = NAL_PACKET_FIFO.shift(); socket.send(nalu2);
                                 let nalu3 = NAL_PACKET_FIFO.shift(); socket.send(nalu3);
-                                $("#ws_tx_status").html(`20ms内发送3个NALU，总长度 ${nalu1.byteLength + nalu2.byteLength + nalu3.byteLength} Bytes`);
+                                $("#ws_tx_status").html(`发送3个NALU，总长度 ${nalu1.byteLength + nalu2.byteLength + nalu3.byteLength} Bytes`);
                             }
-                        }, 20);
+                        }, 0);
 
                     });
                 });
