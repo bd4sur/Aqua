@@ -286,7 +286,7 @@ function decode(rawAudioData, filename) {
                 else {
                     // 将刚刚取出的分片与当前音频帧复用为CMS帧，并拆分成NALU
                     let video_slice_sce_frame = sce_encode(2, frameCount, VIDEO_SLICE_COUNT, s);
-                    let video_cms_frame = cms_encode([audio_sce_frame, video_slice_sce_frame]);
+                    let video_cms_frame = cms_encode([video_slice_sce_frame]);
                     // 将CMS帧拆分成NAL报文，加入NAL_PACKET_FIFO
                     let nal_packets = cms_frame_to_nal_packets(video_cms_frame, NALU_MTU);
                     for(let i = 0; i < nal_packets.length; i++) {
