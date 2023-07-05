@@ -240,14 +240,7 @@ function decode(rawAudioData, filename) {
                 let video_frame = VIDEO_FRAMES.shift();
                 // 如果没有取出视频帧，说明FIFO饥饿，构建带填充的CMS帧
                 if(video_frame === undefined) {
-                    // TODO 以下是重复代码块
-                    // 随机填充数据，用以填充没有视频帧分片的CMS帧，使得平均码率稳定，进而使得音频帧在码流中均匀分布
-                    let random_padding = [];
-                    for(let i = 0; i < 2500; i++) { // TODO 平均每个视频帧分片为2500B，因此填充部分也是2500B
-                        random_padding[i] = Math.floor(Math.random() * 256);
-                    }
-                    let padding_sce_frame = sce_encode(0, frameCount, 0xffff, random_padding);
-                    cms_frame = cms_encode([audio_sce_frame, padding_sce_frame]);
+                    cms_frame = cms_encode([audio_sce_frame]);
                 }
                 // 如果取出了视频帧，则对其进行分片
                 else {
@@ -276,13 +269,7 @@ function decode(rawAudioData, filename) {
                 VIDEO_SLICE_COUNT++;
                 // 一般是没有视频的情况
                 if(s === undefined) {
-                    // 随机填充数据，用以填充没有视频帧分片的CMS帧，使得平均码率稳定，进而使得音频帧在码流中均匀分布
-                    let random_padding = [];
-                    for(let i = 0; i < 2500; i++) { // TODO 平均每个视频帧分片为2500B，因此填充部分也是2500B
-                        random_padding[i] = Math.floor(Math.random() * 256);
-                    }
-                    let padding_sce_frame = sce_encode(0, frameCount, 0xffff, random_padding);
-                    cms_frame = cms_encode([audio_sce_frame, padding_sce_frame]);
+                    cms_frame = cms_encode([audio_sce_frame]);
                 }
                 else {
                     // 将刚刚取出的分片与当前音频帧复用为CMS帧，并拆分成NALU
