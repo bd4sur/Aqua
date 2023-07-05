@@ -121,7 +121,7 @@ function cms_encode(sce_frames) {
 
 
 // NAL层编码解码
-// 将一个完整的CMS帧拆分成一组NAL报文，每个NAL报文的长度不超过mtu
+// 将一个完整的CMS帧拆分成一组NAL报文，每个NAL报文的长度不超过mtu，不足mtu的补齐到mtu
 function cms_frame_to_nal_packets(cms_frame, mtu) {
     const nal_sync_word = [66, 68, 52, 83, 85, 82, 0, 77]; // 同步字符串“BD4SUR\u0000M”
     let nal_packets = [];
@@ -150,6 +150,11 @@ function cms_frame_to_nal_packets(cms_frame, mtu) {
 
         for(let i = 0; i < nal_payload.length; i++) {
             nal_packet.push(nal_payload[i]);
+        }
+
+        // 长度补齐到mtu
+        for(let i = nal_packet.length; i < mtu; i++) {
+            nal_packet.push(Math.ceil(Math.random() * 255));
         }
 
         nal_packets.push(nal_packet);
