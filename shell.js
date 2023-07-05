@@ -63,9 +63,10 @@ function readerOnLoad(reader, filename) {
 
                         $("#play").attr("data-state", "playing");
 
+                        /*
                         // 发送NALU
                         setInterval(() => {
-                             // 通过WebSocket逐个发送NAL报文
+                            // 通过WebSocket逐个发送NAL报文
                             if(NAL_PACKET_FIFO.length >= 3 && socket.readyState === WebSocket.OPEN) {
                                 let nalu1 = NAL_PACKET_FIFO.shift(); socket.send(nalu1);
                                 let nalu2 = NAL_PACKET_FIFO.shift(); socket.send(nalu2);
@@ -73,6 +74,7 @@ function readerOnLoad(reader, filename) {
                                 $("#ws_tx_status").html(`发送3个NALU，总长度 ${nalu1.byteLength + nalu2.byteLength + nalu3.byteLength} Bytes`);
                             }
                         }, 0);
+                        */
 
                     });
                 });
@@ -223,24 +225,32 @@ function decode(rawAudioData, filename) {
             $("#speed").html(`${speed}x`);
             $("#progressbar").css("width", `${(frameCount / frameNumber * 100).toFixed(2)}%`);
 
-            if(ws_opened === false) {
+            if(ws_opened === false || socket.readyState !== WebSocket.OPEN) {
                 return;
             }
 
-            let cms_frame = null;
-
             // 构建音频SCE帧
             let audio_sce_frame = sce_encode(1, frameCount, 0xffff, info.frame);
-            // 音视频码流复用（组装CMS帧）
+            // 封装为CMS帧发射出去
+            let audio_cms_frame = cms_encode([audio_sce_frame]);
+            // TODO 重复代码
+            let nal_packets = cms_frame_to_nal_packets(audio_cms_frame, NALU_MTU);
+            for(let i = 0; i < nal_packets.length; i++) {
+                let nal_packet = new Uint8Array(nal_packets[i]);
+                socket.send(nal_packet);
+                // NAL_PACKET_FIFO.push(nal_packet);
+            }
+            $("#nalu_fifo_length").html(`${NAL_PACKET_FIFO.length}`);
+
             // 关键帧检查：首先检查当前时刻是否应该取出视频帧
             if(need_next_video_frame(frameCount) === true) {
                 // 判断当前时刻是否是特殊关键帧，如果是特殊关键帧，则切成5片；否则切成4片
                 let video_slice_number = (is_special_critical_frame(frameCount)) ? 5 : 4;
                 // 从FIFO头部取出一个视频帧
                 let video_frame = VIDEO_FRAMES.shift();
-                // 如果没有取出视频帧，说明FIFO饥饿，构建带填充的CMS帧
+                // 如果没有取出视频帧，说明FIFO饥饿
                 if(video_frame === undefined) {
-                    cms_frame = cms_encode([audio_sce_frame]);
+                    return;
                 }
                 // 如果取出了视频帧，则对其进行分片
                 else {
@@ -252,15 +262,17 @@ function decode(rawAudioData, filename) {
                     // 将第一个分片与当前音频帧复用为CMS帧
                     VIDEO_SLICE_COUNT = 0;
                     let video_slice_sce_frame = sce_encode(2, frameCount, VIDEO_SLICE_COUNT, slices[0]);
-                    cms_frame = cms_encode([audio_sce_frame, video_slice_sce_frame]);
+                    let video_cms_frame = cms_encode([video_slice_sce_frame]);
+                    // 将CMS帧拆分成NAL报文，加入NAL_PACKET_FIFO
+                    let nal_packets = cms_frame_to_nal_packets(video_cms_frame, NALU_MTU);
+                    for(let i = 0; i < nal_packets.length; i++) {
+                        let nal_packet = new Uint8Array(nal_packets[i]);
+                        socket.send(nal_packet);
+                        // NAL_PACKET_FIFO.push(nal_packet);
+                    }
+                    $("#nalu_fifo_length").html(`${NAL_PACKET_FIFO.length}`);
                 }
-                // 将CMS帧拆分成NAL报文，加入NAL_PACKET_FIFO
-                let nal_packets = cms_frame_to_nal_packets(cms_frame, NALU_MTU);
-                for(let i = 0; i < nal_packets.length; i++) {
-                    let nal_packet = new Uint8Array(nal_packets[i]);
-                    NAL_PACKET_FIFO.push(nal_packet);
-                }
-                $("#nalu_fifo_length").html(`${NAL_PACKET_FIFO.length}`);
+
             }
             // 如果当前时刻不是关键帧
             else {
@@ -269,20 +281,22 @@ function decode(rawAudioData, filename) {
                 VIDEO_SLICE_COUNT++;
                 // 一般是没有视频的情况
                 if(s === undefined) {
-                    cms_frame = cms_encode([audio_sce_frame]);
+                    return;
                 }
                 else {
                     // 将刚刚取出的分片与当前音频帧复用为CMS帧，并拆分成NALU
                     let video_slice_sce_frame = sce_encode(2, frameCount, VIDEO_SLICE_COUNT, s);
-                    cms_frame = cms_encode([audio_sce_frame, video_slice_sce_frame]);
+                    let video_cms_frame = cms_encode([audio_sce_frame, video_slice_sce_frame]);
+                    // 将CMS帧拆分成NAL报文，加入NAL_PACKET_FIFO
+                    let nal_packets = cms_frame_to_nal_packets(video_cms_frame, NALU_MTU);
+                    for(let i = 0; i < nal_packets.length; i++) {
+                        let nal_packet = new Uint8Array(nal_packets[i]);
+                        socket.send(nal_packet);
+                        // NAL_PACKET_FIFO.push(nal_packet);
+                    }
+                    $("#nalu_fifo_length").html(`${NAL_PACKET_FIFO.length}`);
                 }
-                // 将CMS帧拆分成NAL报文，加入NAL_PACKET_FIFO
-                let nal_packets = cms_frame_to_nal_packets(cms_frame, NALU_MTU);
-                for(let i = 0; i < nal_packets.length; i++) {
-                    let nal_packet = new Uint8Array(nal_packets[i]);
-                    NAL_PACKET_FIFO.push(nal_packet);
-                }
-                $("#nalu_fifo_length").html(`${NAL_PACKET_FIFO.length}`);
+
             }
 
         };
