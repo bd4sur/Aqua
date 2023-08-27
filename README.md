@@ -3,21 +3,36 @@
 
 ------
 
-An experimental MP3 encoder. **DO NOT USE THIS ENCODER FOR SERIOUS PURPOSES! (e.g. archiving, broadcasting, etc.)**
+Experimental MPEG-1 Audio Layer 3 (MP3) encoder. Implemented according to ISO/IEC 11172-3 and its reference code "dist10" for personal research. No decoder included in this repo.
 
-实验性 MPEG-1 Audio Layer 3 (MP3) 音频编码器。依据 ISO/IEC 11172-3 及其配套的示例代码“dist10”实现，用于MP3编码算法学习、验证。本系统不含解码器。
+**WARNING: USE AT YOUR OWN RISK! DO NOT USE THIS ENCODER FOR FORMAL PURPOSES! (e.g. archiving, broadcasting, etc.)**
 
-**警示：本编码器仅供作者个人学习研究，并不成熟可靠，请勿用于严肃的音频编码任务，如音频存档、正式广播等。请务必使用ffmpeg、LAME等成熟的编码器。**
+实验性 MPEG-1 Audio Layer 3 (MP3) 音频编码器。依据 ISO/IEC 11172-3 及其配套的参考代码“dist10”实现，用于个人学习研究。本系统不含解码器。
 
-**▶ [可视化交互原型](https://bd4sur.com/Aqua/index.html)**
+**警示：风险自负！请勿将本编码器用于正式目的，例如存档、广播等。**
 
-## 特性规划
+**▶ [在线体验 Online Demo](https://bd4sur.com/Aqua/index.html)**
 
-计划开发的特性：第二心理声学模型、联合立体声。
+## 特性
 
-暂不实现的特性：混合块、尺度因子预测（即scfsi）、低采样率支持（MPEG-2标准）、VBR（非标准）、ID3标签（非标准）、回放增益（非标准）等等。
+- 目前实现的特性：采样率32kHz/44.1kHz/48kHz，恒定码率64/128/224/320kbps。
+- 计划开发的特性：第二心理声学模型、联合立体声。
+- 暂不实现的特性：混合块、尺度因子预测（即scfsi）、低采样率支持、VBR、ID3标签、回放增益等等。
+- 可视化工具：[分析子带滤波器组](https://bd4sur.com/Aqua/demo/Filterbank.html)
 
-## 开发进度
+## 使用方法
+
+- 可视化用户界面：下载仓库，直接在浏览器中打开`index.html`即可。
+- 控制台命令：执行`node aqua.js`，用于批量编码。待完善。
+- 构建：`npx tsc`
+
+## 研究笔记
+
+![编码器框图](./documentation/aqua-overview.png)
+
+![码率和噪声控制循环](./documentation/aqua-rdo-loop.png)
+
+## 研究开发进度
 
 - 2019-11-01：开始资料调研
 - 2019-11-09：实现WAV解析原型
@@ -41,40 +56,11 @@ An experimental MP3 encoder. **DO NOT USE THIS ENCODER FOR SERIOUS PURPOSES! (e.
 - 待办：实现第二心理声学模型和高频预加重
 - 待办：完善文档和笔记；处理掉所有TODO
 
-## 构建、运行
-
-GR音频PCM源 → GR浮点PCM编码为PDU → GR_TCP_Client
-
-Aqua_TCP_Server → MP3_Encoder → stdout → lame解码 → aplay播放
-
-Aqua_TCP_Server → MP3_Encoder → Aqua_TCP_Client
-
-GR_TCP_Server → GR_QPSK_Transmitter
-
-GR_QPSK_Reveiver → FIFO/Pipe → lame解码 → aplay播放
-
-```
-npx tsc
-node aqua.js | lame --decode --mp3input - - | aplay -
-```
-
-## 可视化
-
-- [分析子带滤波器组](https://bd4sur.com/Aqua/demo/Filterbank.html)
-
-## 研究笔记
-
-![编码器框图](./documentation/aqua-overview.png)
-
-![码率和噪声控制循环](./documentation/aqua-rdo-loop.png)
-
 ## 权利声明
 
-版权所有 © 2019~2022 BD4SUR，保留所有权利。
+版权所有 © 2019~2023 BD4SUR，保留所有权利。
 
-采用MIT协议授权。
-
-本系统为个人以学习和自用目的所创作的作品。作者不对此系统的质量作任何承诺，不保证提供任何形式的解释、维护或支持，也不为任何人使用此系统所造成的任何正面的或负面的后果负责。
+本系统“按原样”提供，采用MIT协议授权。本系统为作者个人以学习和自用目的所创作的作品。作者不对本系统的质量作任何承诺。作者不保证提供有关本系统的任何形式的解释、维护或支持。作者不为任何人使用此系统所造成的任何正面的或负面的后果负责。
 
 **第三方组件**
 
