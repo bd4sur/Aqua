@@ -166,8 +166,9 @@ function encode(wavfile) {
 }
 
 function Main() {
+
     // 编码器初始化
-    Aqua_Init(2, 44100, 320000);
+    Aqua_Init(2, 48000, 320000);
 
     // 遍历wav目录下的wav文件
     let files = fs.readdirSync("./wav", {withFileTypes: true});
@@ -178,7 +179,7 @@ function Main() {
         filename = filename.replace(/\.wav$/gi, "");
 
         let mp3_path = `./mp3/${filename}.mp3`;
-        console.log(`Encoding: ${wav_path}`);
+        console.log(`Encoding "${wav_path}" to "${mp3_path}"`);
 
         let wavfilebuffer = fs.readFileSync(wav_path);
 
@@ -190,12 +191,14 @@ function Main() {
         let DurationSec = Math.floor(Duration - DurationMin * 60);
         let DurationMsec = Math.round((Duration - DurationMin * 60 - DurationSec) * 1000);
 
-        console.log(`${wavfile.Channels} Channels / ${wavfile.SampleRate} Hz / ${wavfile.BitsPerSample} bits / ${wavfile.Channels * wavfile.BitsPerSample * wavfile.SampleRate / 1000} kbps / ${DurationMin}:${DurationSec}.${DurationMsec} / ${wavfile.Length} samples / ${Math.ceil(wavfile.Length / 1152)} frames`);
+        console.log(`Input:  ${wavfile.Channels} Channels / ${wavfile.SampleRate} Hz / ${wavfile.BitsPerSample} bits / ${wavfile.Channels * wavfile.BitsPerSample * wavfile.SampleRate / 1000} kbps / ${DurationMin}:${DurationSec}.${DurationMsec} / ${wavfile.Length} samples / ${Math.ceil(wavfile.Length / 1152)} frames`);
+        console.log(`Output: ${320}kbps CBR / ${wavfile.SampleRate} Hz`);
+        Aqua_Reset(wavfile.Channels, wavfile.SampleRate, 320000);
 
         let mp3ByteStream = encode(wavfile);
 
         fs.writeFileSync(mp3_path, new Uint8Array(mp3ByteStream), {"flag": "w"});
-        console.log(`\nOutput: ${mp3_path}\n`);
+        console.log(`\nDone.\n`);
     }
 }
 

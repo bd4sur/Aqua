@@ -162,14 +162,19 @@ function Aqua_Init(channels, sampleRate, bitRate) {
         };
     }
 
+    // 比特储备池变量 初始化
+
+    RESERVOIR_MAX  = 0;
+    RESERVOIR_SIZE = 0;
+
     // MDCT系数初始化
 
-    for(i = 0; i < 18; i++) {
+    for(let i = 0; i < 18; i++) {
         for(let k = 0; k < 36; k++) {
             MDCT_FACTOR_36[i * 36 + k] = Math.cos(Math.PI * (2 * k + 1 + 18) * (2 * i + 1) / (2 * 36));
         }
     }
-    for(i = 0; i < 6; i++) {
+    for(let i = 0; i < 6; i++) {
         for(let k = 0; k < 12; k++) {
             MDCT_FACTOR_12[i * 12 + k] = Math.cos(Math.PI * (2 * k + 1 + 6) * (2 * i + 1) / (2 * 12));
         }
@@ -199,6 +204,57 @@ function Aqua_Init(channels, sampleRate, bitRate) {
     return true;
 
 }
+
+
+function Aqua_Reset(channels, sampleRate, bitRate) {
+
+    // 设置声道数、采样率和比特率
+
+    switch(channels) {
+        case 1: CHANNELS = 1; break;
+        case 2: CHANNELS = 2; break;
+        default:    console.error(`Aqua仅支持至多两个声道的立体声（不支持联合立体声）。`); return false;
+    }
+
+    switch(sampleRate) {
+        case 44100: SAMPLE_RATE = SAMPLE_RATE_44100; break;
+        case 48000: SAMPLE_RATE = SAMPLE_RATE_48000; break;
+        case 32000: SAMPLE_RATE = SAMPLE_RATE_32000; break;
+        default:    console.error(`Aqua不支持采样率 ${sampleRate}Hz。`); return false;
+    }
+
+    switch(bitRate) {
+        case 320000: BIT_RATE = BIT_RATE_320K; break;
+        case 224000: BIT_RATE = BIT_RATE_224K; break;
+        case 128000: BIT_RATE = BIT_RATE_128K; break;
+        case 64000:  BIT_RATE = BIT_RATE_64K; break;
+        default:    console.warn(`Aqua不支持比特率 ${sampleRate}bps。默认设置为320kbps。`); BIT_RATE = BIT_RATE_320K; break;
+    }
+
+    // 缓存清除
+
+    for(let ch = 0; ch < CHANNELS; ch++) {
+        let zeros = new Array();
+        for(let i = 0; i < 32; i++) {
+            zeros[i] = new Array();
+            for(let j = 0; j < 18; j++) {
+                zeros[i][j] = 0;
+            }
+        }
+        BUFFER[ch] = {
+            "PREV_BLOCK_TYPE": WINDOW_NORMAL,
+            "PREV_SUBBANDS": zeros
+        };
+    }
+
+    // 比特储备池变量 清除
+
+    RESERVOIR_MAX  = 0;
+    RESERVOIR_SIZE = 0;
+
+    return true;
+}
+
 
 /////////////////////////////////////////////////////////////////
 //
