@@ -9,14 +9,12 @@
 <body>
 <div class="Main">
     <div class="Title">
-        <table style="display: inline-block; border-collapse: collapse; border-spacing: 0;">
-            <tr>
-                <td><img src="./documentation/logo.png" width="150"></td>
-                <td style="font-size: 18px; font-weight: bold; color:#ccc;"> / MP3 Encoder</td>
-            </tr>
-        </table>
+        <div class="TitleLeft" style="display: flex; align-items: center; justify-content: flex-start;">
+            <img src="./doc/logo.png" width="150">
+            <div style="font-size: 18px; font-weight: bold; color:#8b8e9866; margin-left: 3px;"> · MP3 Encoder</div>
+        </div>
 
-        <div style="float: right; right: 0; margin-top: 18px;">
+        <div>
 
             <svg t="1590918317848" class="icon" viewBox="-256 -256 1536 1536" version="1.1" xmlns="http://www.w3.org/2000/svg" p-id="28129" width="22" height="22"><path d="M512 987.98832499c-28.93231393 0-52.60387089-23.67155697-52.60387089-52.60387089V80.57864127c0-28.93231393 23.67155697-52.60387089 52.60387089-52.60387089s52.60387089 23.67155697 52.60387089 52.60387089v854.80581283c0 28.93231393-23.67155697 52.60387089-52.60387089 52.60387089zM288.43570628 832.80770725c-28.93231393 0-52.60387089-23.67155697-52.60387088-52.60263801V248.90930207c0-28.93108103 23.67155697-52.602638 52.60387088-52.60263799s52.602638 23.67155697 52.602638 52.60263799v531.29576717c0 28.93108103-23.67155697 52.602638-52.602638 52.60263801zM64.87017967 693.40936037c-28.93108103 0-52.602638-23.67155697-52.602638-52.60387089V401.46015779c0-28.93231393 23.67155697-52.60387089 52.602638-52.60387089S117.47405056 372.52784386 117.47405056 401.46015779V640.80548948c2.62976203 28.93231393-21.04179494 52.60387089-52.60387089 52.60387089z m894.25964066 0c-28.93231393 0-52.60387089-23.67155697-52.60387089-52.60387089V401.46015779C906.52594944 372.52784386 930.19750641 348.8562869 959.12982033 348.8562869s52.602638 23.67155697 52.602638 52.60387089V640.80548948c0 28.93231393-23.67155697 52.60387089-52.602638 52.60387089zM738.19528863 830.17794522c-28.93231393 0-52.60387089-23.67155697-52.60387088-52.6038709V246.27954004c0-28.93231393 23.67155697-52.60387089 52.60387088-52.60387089s52.602638 23.67155697 52.602638 52.60387089v531.29453428c0 28.93231393-23.67155697 52.60387089-52.602638 52.6038709z" p-id="28130" fill="#707070"></path></svg>
 
@@ -43,10 +41,10 @@
             <canvas id="spectrogram" class="Osc"></canvas>
             <input type="file" id="fileSelector" name="files" multiple class="Input">
             <div id="inputButtonLabel" class="InputButtonLabel">
-                <div style="line-height: 0px; margin-top: 45px;">
-                    <svg t="1590511838623" class="icon" viewBox="0 0 1024 1024" version="1.1" xmlns="http://www.w3.org/2000/svg" p-id="23587" width="30" height="30"><path d="M777.846 119.65l-422.479 80.896c-22.016 4.333-37.809 23.592-37.77 45.923v449.339c-33.83-13.588-78.06-13.706-121.068 2.836-73.925 28.435-116.066 95.271-94.168 149.267 21.897 53.957 99.564 74.713 173.45 46.277 62.345-24.024 102.124-75.303 99.879-123.195V360.212l371.712-71.208V602.9c-33.792-13.627-78.14-13.785-121.147 2.796-73.886 28.475-115.988 95.31-94.13 149.268 21.898 53.957 99.486 74.712 173.332 46.277 61.204-23.592 100.628-73.531 99.88-120.675h0.157V142.572a23.237 23.237 0 0 0-27.57-22.922z" fill="#666" p-id="23588"></path></svg>
+                <div style="line-height: 0px; margin-top: 35px;">
+                    <svg t="1590511838623" class="icon" viewBox="0 0 1024 1024" version="1.1" xmlns="http://www.w3.org/2000/svg" width="40" height="40"><path d="M777.846 119.65l-422.479 80.896c-22.016 4.333-37.809 23.592-37.77 45.923v449.339c-33.83-13.588-78.06-13.706-121.068 2.836-73.925 28.435-116.066 95.271-94.168 149.267 21.897 53.957 99.564 74.713 173.45 46.277 62.345-24.024 102.124-75.303 99.879-123.195V360.212l371.712-71.208V602.9c-33.792-13.627-78.14-13.785-121.147 2.796-73.886 28.475-115.988 95.31-94.13 149.268 21.898 53.957 99.486 74.712 173.332 46.277 61.204-23.592 100.628-73.531 99.88-120.675h0.157V142.572a23.237 23.237 0 0 0-27.57-22.922z" fill="#c6c8ce"></path></svg>
                 </div>
-                <div style="line-height: 30px;">点击选择输入文件，或者直接拖放至这里</div>
+                <div style="line-height: 1.5;">点击选择输入文件，或者直接拖放至这里<br>Click to select a input file, or drag and drop it here.</div>
             </div>
         </div>
 
@@ -77,32 +75,32 @@
 
 </div>
 
-<script src="./script/jquery.min.js"></script>
-<script src="./script/canvas.js"></script>
-<script src="./script/filesaver.js"></script>
+<script src="./lib/jquery.min.js"></script>
+<script src="./lib/canvas.js"></script>
+<script src="./lib/filesaver.js"></script>
 
 <!--以下按照各个模块之间依赖关系的拓扑排序排列-->
 
-<script src="common.js"></script>
+<script src="./src/common.js"></script>
 
-<script src="fft.js"></script>
-<script src="psy.js"></script>
-<script src="subband_filter.js"></script>
-<script src="huffman.js"></script>
-<script src="mdct.js"></script>
-<script src="reservoir.js"></script>
-<script src="qloop.js"></script>
-<script src="stream.js"></script>
+<script src="./src/fft.js"></script>
+<script src="./src/psy.js"></script>
+<script src="./src/subband_filter.js"></script>
+<script src="./src/huffman.js"></script>
+<script src="./src/mdct.js"></script>
+<script src="./src/reservoir.js"></script>
+<script src="./src/qloop.js"></script>
+<script src="./src/stream.js"></script>
 
-<script src="decoder.js"></script>
+<script src="./src/decoder.js"></script>
 
-<script src="main.js"></script>
+<script src="./src/encoder.js"></script>
 
-<script src="spectrogram.js"></script>
+<script src="./src/spectrogram.js"></script>
 
-<script src="video.js"></script>
+<script src="./src/video.js"></script>
 
-<script src="shell.js"></script>
+<script src="./src/shell.js"></script>
 
 </body>
 </html>

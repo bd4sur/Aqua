@@ -1,5 +1,5 @@
 
-<p align="center"><img src="./documentation/logo.png" width="250"></p>
+<p align="center"><img src="./doc/logo.png" width="250"></p>
 
 ------
 
@@ -28,9 +28,9 @@ Experimental MPEG-1 Audio Layer 3 (MP3) encoder. Implemented according to ISO/IE
 
 ## 研究笔记
 
-![编码器框图](./documentation/aqua-overview.png)
+![编码器框图](./doc/aqua-overview.png)
 
-![码率和噪声控制循环](./documentation/aqua-rdo-loop.png)
+![码率和噪声控制循环](./doc/aqua-rdo-loop.png)
 
 ## 研究开发进度
 

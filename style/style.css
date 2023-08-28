@@ -13,6 +13,9 @@ body {
 }
 .Title {
     padding: 30px 40px 0px 40px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
 }
 
 .Border {
@@ -52,7 +55,7 @@ body {
 }
 
 .Copyright {
-    font-size: 12px; text-align: center; line-height: 25px; color: #ccc;
+    font-size: 12px; text-align: center; line-height: 3; color: #9a9ea8;
 }
 
 .Switch {
@@ -93,12 +96,12 @@ body {
 }
 
 .InputButton:hover {
-    background-color: #00000005;
+    background-color: #fafbfc;
 }
 
 .InputButtonLabel {
     width: 100%;
-    color: #666;
+    color: #c6c8ce;
     font-size: 12px;
     text-align: center;
 }
@@ -120,7 +123,7 @@ body {
     padding: 0; 
     width: 100%;
     margin: 0 auto;
-    background-color: #eee;
+    background-color: #eeeff1;
     border: none;
     border-radius: 100px;
     height: 5px;
@@ -137,7 +140,7 @@ body {
 }
 
 .Timer {
-    color: #888; font-size: 14px; font-family: 'consolas', Courier, monospace;
+    color: #9a9ea8; font-size: 14px; font-family: 'consolas', Courier, monospace;
 }
 
 .NoteContainer {
@@ -191,4 +194,4 @@ a:hover{
 }
 .PlayButton:hover { color: #00aaff; background-color: #cdeeff;}
 .PlayButton:active { color: #ffffff; background-color: #40bfff;}
-.PlayButton[disabled] { color: #888888; background-color: #eeeeee;}
+.PlayButton[disabled] { color: #95979c; background-color: #edeef0;}

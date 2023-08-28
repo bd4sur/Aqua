@@ -6,17 +6,17 @@
         "outFile": "aqua.js"
     },
     "files": [
-        "common.js",
-        "fft.js",
-        "psy.js",
-        "subband_filter.js",
-        "huffman.js",
-        "mdct.js",
-        "reservoir.js",
-        "qloop.js",
-        "stream.js",
-        "decoder.js",
-        "main.js",
-        "node_main.js"
+        "src/common.js",
+        "src/fft.js",
+        "src/psy.js",
+        "src/subband_filter.js",
+        "src/huffman.js",
+        "src/mdct.js",
+        "src/reservoir.js",
+        "src/qloop.js",
+        "src/stream.js",
+        "src/decoder.js",
+        "src/encoder.js",
+        "src/main.js"
     ]
 }
