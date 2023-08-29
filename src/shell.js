@@ -12,6 +12,9 @@
 //
 /////////////////////////////////////////////////////////////////
 
+// GUI的比特率状态
+let shell_bitrate = 320000;
+
 const NALU_MTU = 1000; // NAL层最小传输单元长度
 
 let AudioContext = new window.AudioContext();
@@ -43,9 +46,10 @@ let cv = SpectrogramInit("spectrogram");
 
 function readerOnLoad(reader, filename) {
     return () => {
+        $(".BitrateSwitchContainer").fadeIn(300);
         $("#play").removeAttr("disabled");
         $("#play").unbind("click"); // 删除旧的事件处理函数，以应对重复选择文件的情况
-        $("#play").click(() => {
+        $("#play").on("click", () => {
             if(filename.length <= 0) {
                 alert("请选择文件");
                 return;
@@ -127,6 +131,28 @@ $("#videoFileSelector").change(() => {
     Reader.readAsArrayBuffer(file);
 });
 
+$(".BitrateSwitch").each(function(i, e) {
+    $(e).on("click", (event) => {
+        let brid = $(e).attr("id");
+        if(brid === "br64k") {
+            shell_bitrate = 64000;
+        }
+        else if(brid === "br128k") {
+            shell_bitrate = 128000;
+        }
+        else if(brid === "br224k") {
+            shell_bitrate = 224000;
+        }
+        else if(brid === "br320k") {
+            shell_bitrate = 320000;
+        }
+
+        $(".BitrateSwitch").removeClass("BitrateSwitch_Active");
+        $(e).addClass("BitrateSwitch_Active");
+
+        $(".PlayButton").fadeIn(300);
+    });
+});
 
 function decode(rawAudioData, filename) {
     $("#timer").html(`浏览器解码中……`);
@@ -151,6 +177,8 @@ function decode(rawAudioData, filename) {
         const dataArray = new Uint8Array(bufferLength);
 
         bufferSourceNode.connect(analyser);
+
+        $(".BitrateSwitchContainer").html(`MP3 Encoding : ${sampleRate} Hz / ${shell_bitrate / 1000} kbps CBR`);
 
         /////////////////////////////////////////////
         //  绘制声谱图（会严重拖慢运行速度）或波形图
@@ -344,7 +372,7 @@ function decode(rawAudioData, filename) {
         };
 
         // 编码器入口
-        Aqua_Main(leftChannel, rightChannel, 2, sampleRate, 320000, onRunning, onFinished);
+        Aqua_Main(leftChannel, rightChannel, 2, sampleRate, shell_bitrate, onRunning, onFinished);
 
     });
 }

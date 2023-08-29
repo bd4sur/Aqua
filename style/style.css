@@ -96,7 +96,7 @@ body {
 }
 
 .InputButton:hover {
-    background-color: #fafbfc;
+    background-color: #29323a05;
 }
 
 .InputButtonLabel {
@@ -113,6 +113,33 @@ body {
     position: absolute;
     top: 0; left: 0;
     z-index: -1;
+}
+
+.BitrateSwitchContainer {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    margin: 20px auto;
+    height: 40px;
+    color: #888c93;
+    font-size: 11px;
+}
+.BitrateSwitch {
+    font-size: 10px;
+    background: linear-gradient(180deg, #f6f7f9, #e0e2e7);
+    color: #888c93;
+    padding: 5px 10px;
+    cursor: default;
+}
+.BitrateSwitch_Left {
+    border-radius: 6px 0px 0px 6px;
+}
+.BitrateSwitch_Right {
+    border-radius: 0px 6px 6px 0px;
+}
+.BitrateSwitch_Active {
+    background: linear-gradient(180deg, #66ccff, #15e);
+    color: #fff;
 }
 
 .InfoLeft  { text-align: right; font-weight: bold; }
