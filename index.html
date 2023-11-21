@@ -27,11 +27,9 @@
         </div>
     </div>
 
-    <div class="Block" style="display: none;">
-        <div>选择SV视频文件：<input type="file" id="videoFileSelector" name="video_files" multiple></div>
-        <div>WS连接状态：<span id="ws_status">-</span></div>
-        <div>WS传输状态：<span id="ws_tx_status">-</span></div>
-        <div>NALU FIFO：<span id="nalu_fifo_length">-</span> frames</div>
+    <div class="Block" style="display: flex; justify-content: flex-start; align-items: center; flex-direction: row;">
+        <div class="WebsocketStatusIndicator" id="ws_status">WS未连接</div>
+        <div id="VideoSelector" style="display: none; margin-left: 10px; font-size: 11px;">选择SV视频文件：<input class="VideoInput" type="file" id="videoFileSelector" name="video_files" multiple></div>
     </div>
 
     <div class="Block">

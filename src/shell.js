@@ -26,20 +26,20 @@ let audio_frame_clock = 0;
 
 let ws_opened = false;
 
-let NAL_PACKET_FIFO = [];
-
 let VIDEO_SLICE_FIFO = [];
 let VIDEO_SLICE_COUNT = 0;
 
 // TODO IP参数
-let ws_ip_address = "localhost";
+let ws_ip_address = "192.168.10.62";
 let socket = null;
 socket = new WebSocket(`ws://${ws_ip_address}:5000/`);
 socket.binaryType = "arraybuffer";
 socket.addEventListener('open', (event) => {
-    $("#ws_status").html("WebSocket Opened");
+    $("#ws_status").html("WS已连接");
+    $("#ws_status").css("background-color", "#1bb61b");
+    $("#VideoSelector").show();
     ws_opened = true;
-    // socket.send('Hello Server!');
+    socket.send('Hello Tx Server!');
 });
 
 let cv = SpectrogramInit("spectrogram");
@@ -66,20 +66,6 @@ function readerOnLoad(reader, filename) {
                         decode(reader.result, filename);
 
                         $("#play").attr("data-state", "playing");
-
-                        /*
-                        // 发送NALU
-                        setInterval(() => {
-                            // 通过WebSocket逐个发送NAL报文
-                            if(NAL_PACKET_FIFO.length >= 3 && socket.readyState === WebSocket.OPEN) {
-                                let nalu1 = NAL_PACKET_FIFO.shift(); socket.send(nalu1);
-                                let nalu2 = NAL_PACKET_FIFO.shift(); socket.send(nalu2);
-                                let nalu3 = NAL_PACKET_FIFO.shift(); socket.send(nalu3);
-                                $("#ws_tx_status").html(`发送3个NALU，总长度 ${nalu1.byteLength + nalu2.byteLength + nalu3.byteLength} Bytes`);
-                            }
-                        }, 0);
-                        */
-
                     });
                 });
             }
@@ -115,10 +101,6 @@ $("#fileSelector").change(() => {
 // 2023年6月：增加视频编码
 // 首先解析SV视频文件，得到所有的视频帧。SV文件由另外的工具预先生成，未来要考虑整合到这里。
 $("#videoFileSelector").change(() => {
-    // 获取文件名
-    let fakepath = $("#videoFileSelector").val().split(/\\|\//gi);
-    let filename = fakepath[fakepath.length - 1];
-    $("#inputButtonLabel").html(filename);
     // 读取文件
     let file = videoFileSelector.files[0];
     let Reader = new FileReader();
@@ -266,9 +248,7 @@ function decode(rawAudioData, filename) {
             for(let i = 0; i < nal_packets.length; i++) {
                 let nal_packet = new Uint8Array(nal_packets[i]);
                 socket.send(nal_packet);
-                // NAL_PACKET_FIFO.push(nal_packet);
             }
-            $("#nalu_fifo_length").html(`${NAL_PACKET_FIFO.length}`);
 
             // 关键帧检查：首先检查当前时刻是否应该取出视频帧
             if(need_next_video_frame(frameCount) === true) {
@@ -291,14 +271,12 @@ function decode(rawAudioData, filename) {
                     VIDEO_SLICE_COUNT = 0;
                     let video_slice_sce_frame = sce_encode(2, frameCount, VIDEO_SLICE_COUNT, slices[0]);
                     let video_cms_frame = cms_encode([video_slice_sce_frame]);
-                    // 将CMS帧拆分成NAL报文，加入NAL_PACKET_FIFO
+                    // 将CMS帧拆分成NAL报文
                     let nal_packets = cms_frame_to_nal_packets(video_cms_frame, NALU_MTU);
                     for(let i = 0; i < nal_packets.length; i++) {
                         let nal_packet = new Uint8Array(nal_packets[i]);
                         socket.send(nal_packet);
-                        // NAL_PACKET_FIFO.push(nal_packet);
                     }
-                    $("#nalu_fifo_length").html(`${NAL_PACKET_FIFO.length}`);
                 }
 
             }
@@ -315,14 +293,12 @@ function decode(rawAudioData, filename) {
                     // 将刚刚取出的分片与当前音频帧复用为CMS帧，并拆分成NALU
                     let video_slice_sce_frame = sce_encode(2, frameCount, VIDEO_SLICE_COUNT, s);
                     let video_cms_frame = cms_encode([video_slice_sce_frame]);
-                    // 将CMS帧拆分成NAL报文，加入NAL_PACKET_FIFO
+                    // 将CMS帧拆分成NAL报文
                     let nal_packets = cms_frame_to_nal_packets(video_cms_frame, NALU_MTU);
                     for(let i = 0; i < nal_packets.length; i++) {
                         let nal_packet = new Uint8Array(nal_packets[i]);
                         socket.send(nal_packet);
-                        // NAL_PACKET_FIFO.push(nal_packet);
                     }
-                    $("#nalu_fifo_length").html(`${NAL_PACKET_FIFO.length}`);
                 }
 
             }

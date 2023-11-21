@@ -58,6 +58,16 @@ body {
     font-size: 12px; text-align: center; line-height: 3; color: #9a9ea8;
 }
 
+.WebsocketStatusIndicator {
+    display: inline-block;
+    background-color: #cfd1d7;
+    font-size: 11px;
+    color: #fff;
+    border-radius: 2px;
+    padding: 0 6px;
+    line-height: 1.5;
+}
+
 .Switch {
     position: relative;
     display: inline-block;
@@ -76,6 +86,10 @@ body {
     border: none;
     border-radius: 100%;
     background-color: #fff;
+}
+
+.VideoInput {
+    font-size: 10px;
 }
 
 .Input {
