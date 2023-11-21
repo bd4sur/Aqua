@@ -243,6 +243,7 @@ function decode(rawAudioData, filename) {
             let audio_sce_frame = sce_encode(1, frameCount, 0xffff, info.frame);
             // 封装为CMS帧发射出去
             let audio_cms_frame = cms_encode([audio_sce_frame]);
+            // NOTE 实验证明，将音频帧和视频分片分散到两个CMS帧中分别发送而不复用，也就是虚级化CMS层，有两个好处：一是降低CMS帧错误率，二是避免接收端饥饿
             // TODO 重复代码
             let nal_packets = cms_frame_to_nal_packets(audio_cms_frame, NALU_MTU);
             for(let i = 0; i < nal_packets.length; i++) {
