@@ -76,7 +76,7 @@ function Aqua_Main(PCM_left, PCM_right, channels, sampleRate, bitRate, onRunning
 
             return byteStream;
         }
-    }, 0);
+    }, 0); // NOTE ATV场景下，将实际的逐帧编码速率调整为与实际信号速率接近，有助于同步，并且可以降低资源占用
 }
 
 /////////////////////////////////////////////////////////////////
