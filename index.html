@@ -28,7 +28,7 @@
     </div>
 
     <div class="Block" style="display: flex; justify-content: flex-start; align-items: center; flex-direction: row;">
-        <div class="WebsocketStatusIndicator" id="ws_status">WS未连接</div>
+        <div class="WebsocketStatusIndicator" id="ws_status">点击连接WebSocket</div>
         <div id="VideoSelector" style="display: none; margin-left: 10px; font-size: 11px;">选择SV视频文件：<input class="VideoInput" type="file" id="videoFileSelector" name="video_files" multiple></div>
     </div>
 
@@ -62,6 +62,11 @@
                 <div id="progressbar" style="height: 100%; background: #66ccff; width: 0px;"></div>
             </div>
         </div>
+
+        <div style="color: #888c93; font-size: 11px;">
+            <div>MP3 FIFO = <span id="mp3_fifo_length">--</span></div>
+            <div>PCM FIFO = <span id="pcm_fifo_length">--</span></div>
+        </div>
 <!--
         <div class="Border"></div>
 
@@ -82,10 +87,13 @@
 <script src="./lib/jquery.min.js"></script>
 <script src="./lib/canvas.js"></script>
 <script src="./lib/filesaver.js"></script>
+<script src="./lib/mp3-decoder.js"></script>
 
 <!--以下按照各个模块之间依赖关系的拓扑排序排列-->
 
 <script src="./src/common.js"></script>
+
+<script src="./src/player.js"></script>
 
 <script src="./src/fft.js"></script>
 <script src="./src/psy.js"></script>

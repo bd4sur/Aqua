@@ -17,9 +17,9 @@ let shell_bitrate = 320000;
 
 const NALU_MTU = 1000; // NAL层最小传输单元长度
 
-let AudioContext = new window.AudioContext();
-
 let isSpetrogramShow = false;
+
+let cv = SpectrogramInit("spectrogram");
 
 let VIDEO_FRAMES = [];
 let audio_frame_clock = 0;
@@ -30,19 +30,20 @@ let VIDEO_SLICE_FIFO = [];
 let VIDEO_SLICE_COUNT = 0;
 
 // TODO IP参数
-let ws_ip_address = "192.168.10.62";
+let ws_ip_address = "192.168.10.248";
 let socket = null;
-socket = new WebSocket(`ws://${ws_ip_address}:5000/`);
-socket.binaryType = "arraybuffer";
-socket.addEventListener('open', (event) => {
-    $("#ws_status").html("WS已连接");
-    $("#ws_status").css("background-color", "#1bb61b");
-    $("#VideoSelector").show();
-    ws_opened = true;
-    socket.send('Hello Tx Server!');
-});
 
-let cv = SpectrogramInit("spectrogram");
+function openWebsocket() {
+    socket = new WebSocket(`ws://${ws_ip_address}:5000/`);
+    socket.binaryType = "arraybuffer";
+    socket.addEventListener('open', (event) => {
+        $("#ws_status").html("WS已连接");
+        $("#ws_status").css("background-color", "#1bb61b");
+        $("#VideoSelector").show();
+        ws_opened = true;
+        socket.send('Hello Tx Server!');
+    });
+}
 
 function readerOnLoad(reader, filename) {
     return () => {
@@ -136,23 +137,159 @@ $(".BitrateSwitch").each(function(i, e) {
     });
 });
 
+const onRunning = (info) => {
+
+    push_into_mp3_frame_fifo(info.frame);
+
+    let frameCount = info.frameCount;
+    let frameNumber = info.frameNumber;
+    let speed = info.speed;
+
+    $("#timer").html(`${(frameCount / frameNumber * 100).toFixed(1)}% (${frameCount}/${frameNumber})`);
+    $("#speed").html(`${speed}x`);
+    $("#progressbar").css("width", `${(frameCount / frameNumber * 100).toFixed(2)}%`);
+
+    if(ws_opened === false || socket.readyState !== WebSocket.OPEN) {
+        return;
+    }
+
+    // 构建音频SCE帧
+    let audio_sce_frame = sce_encode(1, frameCount, 0xffff, info.frame);
+    // 封装为CMS帧发射出去
+    let audio_cms_frame = cms_encode([audio_sce_frame]);
+    // NOTE 实验证明，将音频帧和视频分片分散到两个CMS帧中分别发送而不复用，也就是虚级化CMS层，有两个好处：一是降低CMS帧错误率，二是避免接收端饥饿
+    // TODO 重复代码
+    let nal_packets = cms_frame_to_nal_packets(audio_cms_frame, NALU_MTU);
+    for(let i = 0; i < nal_packets.length; i++) {
+        let nal_packet = new Uint8Array(nal_packets[i]);
+        socket.send(nal_packet);
+    }
+
+    // 关键帧检查：首先检查当前时刻是否应该取出视频帧
+    if(need_next_video_frame(frameCount) === true) {
+        // 判断当前时刻是否是特殊关键帧，如果是特殊关键帧，则切成5片；否则切成4片
+        let video_slice_number = (is_special_critical_frame(frameCount)) ? 5 : 4;
+        // 从FIFO头部取出一个视频帧
+        let video_frame = VIDEO_FRAMES.shift();
+        // 如果没有取出视频帧，说明FIFO饥饿
+        if(video_frame === undefined) {
+            return;
+        }
+        // 如果取出了视频帧，则对其进行分片
+        else {
+            let slices = video_frame_slice(video_frame, video_slice_number);
+            // 除第一个分片外，全部加入分片队列，供后续音频帧到来时复用
+            for(let i = 1; i < video_slice_number; i++) {
+                VIDEO_SLICE_FIFO.push(slices[i]);
+            }
+            // 将第一个分片与当前音频帧复用为CMS帧
+            VIDEO_SLICE_COUNT = 0;
+            let video_slice_sce_frame = sce_encode(2, frameCount, VIDEO_SLICE_COUNT, slices[0]);
+            let video_cms_frame = cms_encode([video_slice_sce_frame]);
+            // 将CMS帧拆分成NAL报文
+            let nal_packets = cms_frame_to_nal_packets(video_cms_frame, NALU_MTU);
+            for(let i = 0; i < nal_packets.length; i++) {
+                let nal_packet = new Uint8Array(nal_packets[i]);
+                socket.send(nal_packet);
+            }
+        }
+
+    }
+    // 如果当前时刻不是关键帧
+    else {
+        // 从分片队列中取出一个分片。由于音视频帧率间的确定关系，TODO ？ 可以保证到下一个关键帧的时候，队列恰好被排空
+        let s = VIDEO_SLICE_FIFO.shift();
+        VIDEO_SLICE_COUNT++;
+        // 一般是没有视频的情况
+        if(s === undefined) {
+            return;
+        }
+        else {
+            // 将刚刚取出的分片与当前音频帧复用为CMS帧，并拆分成NALU
+            let video_slice_sce_frame = sce_encode(2, frameCount, VIDEO_SLICE_COUNT, s);
+            let video_cms_frame = cms_encode([video_slice_sce_frame]);
+            // 将CMS帧拆分成NAL报文
+            let nal_packets = cms_frame_to_nal_packets(video_cms_frame, NALU_MTU);
+            for(let i = 0; i < nal_packets.length; i++) {
+                let nal_packet = new Uint8Array(nal_packets[i]);
+                socket.send(nal_packet);
+            }
+        }
+
+    }
+
+};
+
+const onFinished = (filename) => {
+    return (info) => {
+        let frameNumber = info.frameNumber;
+        let byteStream = info.byteStream;
+
+        $("#timer").html(`${frameNumber} / ${frameNumber} (100%)`);
+        $("#speed").html(`完成`);
+        $("#progressbar").css("width", `100%`);
+        
+        // “完成”按钮动效，以及点击保存的事件绑定
+        $("#play").animate({"width": "5px"}, 200, () => {
+            $("#play").animate({"height": "35px", "width": "35px"}, 400, () => {
+                $("#play").addClass("Done");
+                $("#play").html(`
+                <div style="line-height: 35px; text-align: center; color: #fff;">
+                    <img id="doneIcon" style="width: 0px; height: 35px;" src="data:image/svg+xml,%3Csvg t='1590509837474' class='icon' viewBox='0 0 1024 1024' version='1.1' xmlns='http://www.w3.org/2000/svg' p-id='4042' xmlns:xlink='http://www.w3.org/1999/xlink' width='200' height='200'%3E%3Cdefs%3E%3Cstyle type='text/css'%3E%3C/style%3E%3C/defs%3E%3Cpath d='M935.03 212.628c-28.659-28.662-75.123-28.662-103.78 0l-449.723 449.72L191.26 472.08c-28.66-28.655-75.124-28.655-103.784 0-28.656 28.662-28.656 75.124 0 103.786l242.16 242.156c28.657 28.654 75.123 28.654 103.781 0L935.03 316.404c28.66-28.66 28.66-75.122 0-103.776z' p-id='4043' fill='%23ffffff'%3E%3C/path%3E%3C/svg%3E">
+                </div>`);
+
+                $("#doneIcon").animate({"width": "25px"}, 200);
+
+                $("#play").click(() => {
+                    // 保存到文件
+                    let buffer = new Uint8Array(byteStream);
+                    let file = new File([buffer], `test.mp3`, {type: `audio/mpeg`});
+
+                    // 去掉扩展名
+                    filename = filename.replace(/\..+$/gi, "");
+
+                    // 组装日期字符串
+                    let date = new Date();
+                    let year = date.getFullYear();
+                    let month = date.getMonth() + 1; month = (month < 10) ? `0${month}` : String(month);
+                    let day = date.getDate(); day = (day < 10) ? `0${day}` : String(day);
+                    let hour = date.getHours(); hour = (hour < 10) ? `0${hour}` : String(hour);
+                    let minute = date.getMinutes(); minute = (minute < 10) ? `0${minute}` : String(minute);
+                    let second = date.getSeconds(); second = (second < 10) ? `0${second}` : String(second);
+
+                    saveAs(file, `${filename}_Aqua_${year}${month}${day}_${hour}${minute}${second}.mp3`, true);
+                });
+            });
+        });
+    };
+};
+
 function decode(rawAudioData, filename) {
     $("#timer").html(`浏览器解码中……`);
 
-    AudioContext.decodeAudioData(rawAudioData, (audioBuffer) => {
+    let inputAudioCtx = new window.AudioContext();
+
+    inputAudioCtx.decodeAudioData(rawAudioData, (audioBuffer) => {
         // 获取两个声道的原始数据
         let sampleRate = audioBuffer.sampleRate;
         let length = audioBuffer.length;
         let leftChannel  = audioBuffer.getChannelData(0);
         let rightChannel = audioBuffer.getChannelData(1);
 
-        // 播放
-        let bufferSourceNode = AudioContext.createBufferSource();
-        bufferSourceNode.connect(AudioContext.destination);
+        $(".BitrateSwitchContainer").html(`MP3 Encoding : ${sampleRate} Hz / ${shell_bitrate / 1000} kbps CBR`);
+
+        $(".InputButtonLabel").css("color", "#fff");
+        $(".InputButton").css("border", "none");
+        $(".InputButtonLabel").animate({"line-height": "30px"}, 500);
+
+        // 音频播放与可视化
+/*
+        let bufferSourceNode = inputAudioCtx.createBufferSource();
+        bufferSourceNode.connect(inputAudioCtx.destination);
         bufferSourceNode.buffer = audioBuffer;
         bufferSourceNode.start(0);
 
-        const analyser = AudioContext.createAnalyser();
+        const analyser = inputAudioCtx.createAnalyser();
         analyser.fftSize = WINDOW_LENGTH;
         analyser.smoothingTimeConstant = 0.1;
         const bufferLength = analyser.frequencyBinCount;
@@ -160,23 +297,17 @@ function decode(rawAudioData, filename) {
 
         bufferSourceNode.connect(analyser);
 
-        $(".BitrateSwitchContainer").html(`MP3 Encoding : ${sampleRate} Hz / ${shell_bitrate / 1000} kbps CBR`);
-
         /////////////////////////////////////////////
         //  绘制声谱图（会严重拖慢运行速度）或波形图
         /////////////////////////////////////////////
 
-        $(".InputButtonLabel").css("color", "#fff");
-        $(".InputButton").css("border", "none");
-        $(".InputButtonLabel").animate({"line-height": "30px"}, 500);
-
-        let START_TIME = AudioContext.currentTime;
+        let START_TIME = inputAudioCtx.currentTime;
         // let prevFrameAlignedOffset = 0;
 
         // 显示示波器或者声谱图（不参与编码）
         function play() {
         // let timer = setInterval(() => {
-            let currentTime = AudioContext.currentTime;
+            let currentTime = inputAudioCtx.currentTime;
             let offset = Math.round((currentTime - START_TIME) * sampleRate);
 
             // 控制是否绘制声谱图
@@ -197,7 +328,8 @@ function decode(rawAudioData, filename) {
                 analyser.getByteFrequencyData(dataArray);
                 let spectrum = Array.from(dataArray);
                 PushIntoBuffer(spectrum, SPECTROGRAM_BUFFER, SPECTROGRAM_BUFFER_LENGTH);
-                /*//////////////////////////////////////////////////////////////////////////////////
+
+                // 以下是自行实现的FFT频谱 ////////////////////////////////////////////////////////
                 // 计算帧边缘的offset
                 let frameAlignedOffset = Math.floor(offset / WINDOW_LENGTH) * WINDOW_LENGTH;
                 if(prevFrameAlignedOffset === frameAlignedOffset) {
@@ -208,7 +340,8 @@ function decode(rawAudioData, filename) {
                 // 计算频谱并推入缓冲区
                 let spectrum = CalculateSpectrum(frameAlignedOffset, leftChannel);
                 PushIntoBuffer(spectrum, SPECTROGRAM_BUFFER, SPECTROGRAM_BUFFER_LENGTH);
-                //////////////////////////////////////////////////////////////////////////////////*/
+                //////////////////////////////////////////////////////////////////////////////////
+
                 // 绘制声谱图
                 RenderSpectrogram(cv, SPECTROGRAM_BUFFER, WINDOW_LENGTH);
             }
@@ -224,135 +357,82 @@ function decode(rawAudioData, filename) {
         }
         // }, 0);
         requestAnimationFrame(play);
-
-        const onRunning = (info) => {
-
-            let frameCount = info.frameCount;
-            let frameNumber = info.frameNumber;
-            let speed = info.speed;
-
-            $("#timer").html(`${(frameCount / frameNumber * 100).toFixed(1)}% (${frameCount}/${frameNumber})`);
-            $("#speed").html(`${speed}x`);
-            $("#progressbar").css("width", `${(frameCount / frameNumber * 100).toFixed(2)}%`);
-
-            if(ws_opened === false || socket.readyState !== WebSocket.OPEN) {
-                return;
-            }
-
-            // 构建音频SCE帧
-            let audio_sce_frame = sce_encode(1, frameCount, 0xffff, info.frame);
-            // 封装为CMS帧发射出去
-            let audio_cms_frame = cms_encode([audio_sce_frame]);
-            // NOTE 实验证明，将音频帧和视频分片分散到两个CMS帧中分别发送而不复用，也就是虚级化CMS层，有两个好处：一是降低CMS帧错误率，二是避免接收端饥饿
-            // TODO 重复代码
-            let nal_packets = cms_frame_to_nal_packets(audio_cms_frame, NALU_MTU);
-            for(let i = 0; i < nal_packets.length; i++) {
-                let nal_packet = new Uint8Array(nal_packets[i]);
-                socket.send(nal_packet);
-            }
-
-            // 关键帧检查：首先检查当前时刻是否应该取出视频帧
-            if(need_next_video_frame(frameCount) === true) {
-                // 判断当前时刻是否是特殊关键帧，如果是特殊关键帧，则切成5片；否则切成4片
-                let video_slice_number = (is_special_critical_frame(frameCount)) ? 5 : 4;
-                // 从FIFO头部取出一个视频帧
-                let video_frame = VIDEO_FRAMES.shift();
-                // 如果没有取出视频帧，说明FIFO饥饿
-                if(video_frame === undefined) {
-                    return;
-                }
-                // 如果取出了视频帧，则对其进行分片
-                else {
-                    let slices = video_frame_slice(video_frame, video_slice_number);
-                    // 除第一个分片外，全部加入分片队列，供后续音频帧到来时复用
-                    for(let i = 1; i < video_slice_number; i++) {
-                        VIDEO_SLICE_FIFO.push(slices[i]);
-                    }
-                    // 将第一个分片与当前音频帧复用为CMS帧
-                    VIDEO_SLICE_COUNT = 0;
-                    let video_slice_sce_frame = sce_encode(2, frameCount, VIDEO_SLICE_COUNT, slices[0]);
-                    let video_cms_frame = cms_encode([video_slice_sce_frame]);
-                    // 将CMS帧拆分成NAL报文
-                    let nal_packets = cms_frame_to_nal_packets(video_cms_frame, NALU_MTU);
-                    for(let i = 0; i < nal_packets.length; i++) {
-                        let nal_packet = new Uint8Array(nal_packets[i]);
-                        socket.send(nal_packet);
-                    }
-                }
-
-            }
-            // 如果当前时刻不是关键帧
-            else {
-                // 从分片队列中取出一个分片。由于音视频帧率间的确定关系，TODO ？ 可以保证到下一个关键帧的时候，队列恰好被排空
-                let s = VIDEO_SLICE_FIFO.shift();
-                VIDEO_SLICE_COUNT++;
-                // 一般是没有视频的情况
-                if(s === undefined) {
-                    return;
-                }
-                else {
-                    // 将刚刚取出的分片与当前音频帧复用为CMS帧，并拆分成NALU
-                    let video_slice_sce_frame = sce_encode(2, frameCount, VIDEO_SLICE_COUNT, s);
-                    let video_cms_frame = cms_encode([video_slice_sce_frame]);
-                    // 将CMS帧拆分成NAL报文
-                    let nal_packets = cms_frame_to_nal_packets(video_cms_frame, NALU_MTU);
-                    for(let i = 0; i < nal_packets.length; i++) {
-                        let nal_packet = new Uint8Array(nal_packets[i]);
-                        socket.send(nal_packet);
-                    }
-                }
-
-            }
-
-        };
-
-        const onFinished = (info) => {
-            let frameNumber = info.frameNumber;
-            let byteStream = info.byteStream;
-
-            $("#timer").html(`${frameNumber} / ${frameNumber} (100%)`);
-            $("#speed").html(`完成`);
-            $("#progressbar").css("width", `100%`);
-            
-            // “完成”按钮动效，以及点击保存的事件绑定
-            $("#play").animate({"width": "5px"}, 200, () => {
-                $("#play").animate({"height": "35px", "width": "35px"}, 400, () => {
-                    $("#play").addClass("Done");
-                    $("#play").html(`
-                    <div style="line-height: 35px; text-align: center; color: #fff;">
-                        <img id="doneIcon" style="width: 0px; height: 35px;" src="data:image/svg+xml,%3Csvg t='1590509837474' class='icon' viewBox='0 0 1024 1024' version='1.1' xmlns='http://www.w3.org/2000/svg' p-id='4042' xmlns:xlink='http://www.w3.org/1999/xlink' width='200' height='200'%3E%3Cdefs%3E%3Cstyle type='text/css'%3E%3C/style%3E%3C/defs%3E%3Cpath d='M935.03 212.628c-28.659-28.662-75.123-28.662-103.78 0l-449.723 449.72L191.26 472.08c-28.66-28.655-75.124-28.655-103.784 0-28.656 28.662-28.656 75.124 0 103.786l242.16 242.156c28.657 28.654 75.123 28.654 103.781 0L935.03 316.404c28.66-28.66 28.66-75.122 0-103.776z' p-id='4043' fill='%23ffffff'%3E%3C/path%3E%3C/svg%3E">
-                    </div>`);
-
-                    $("#doneIcon").animate({"width": "25px"}, 200);
-
-                    $("#play").click(() => {
-                        // 保存到文件
-                        let buffer = new Uint8Array(byteStream);
-                        let file = new File([buffer], `test.mp3`, {type: `audio/mpeg`});
-
-                        // 去掉扩展名
-                        filename = filename.replace(/\..+$/gi, "");
-
-                        // 组装日期字符串
-                        let date = new Date();
-                        let year = date.getFullYear();
-                        let month = date.getMonth() + 1; month = (month < 10) ? `0${month}` : String(month);
-                        let day = date.getDate(); day = (day < 10) ? `0${day}` : String(day);
-                        let hour = date.getHours(); hour = (hour < 10) ? `0${hour}` : String(hour);
-                        let minute = date.getMinutes(); minute = (minute < 10) ? `0${minute}` : String(minute);
-                        let second = date.getSeconds(); second = (second < 10) ? `0${second}` : String(second);
-
-                        saveAs(file, `${filename}_Aqua_${year}${month}${day}_${hour}${minute}${second}.mp3`, true);
-                    });
-                });
-            });
-        };
-
+*/
         // 编码器入口
-        Aqua_Main(leftChannel, rightChannel, 2, sampleRate, shell_bitrate, onRunning, onFinished);
+        Aqua_Main(leftChannel, rightChannel, 2, sampleRate, shell_bitrate, onRunning, onFinished(filename));
+
+        // 开始播放
+        start_playing();
 
     });
 }
+
+
+function start_playing() {
+    let decode_timer = setInterval(() => {
+        if(AUDIO_MP3_FRAME_FIFO.length < 2) {
+            console.log("AUDIO_MP3_FRAME_FIFO empty!");
+            return;
+        }
+        // 从 MP3 FIFO 取出3帧，用于解码。解码窗口每次取3个帧，但是窗口只移动1帧。
+        let decoding_frames = AUDIO_MP3_FRAME_FIFO.slice(0, 3);
+        AUDIO_MP3_FRAME_FIFO = AUDIO_MP3_FRAME_FIFO.slice(1);
+
+        // 对解码窗口内各帧进行解码，但是只取出解码后的PCM的最后一帧
+        let res = decode_mp3_frame(decoding_frames);
+        let pcm_l = res[0].slice(MP3_FRAME_SAMPLE_LENGTH * 2);
+        let pcm_r = res[1].slice(MP3_FRAME_SAMPLE_LENGTH * 2);
+
+        // 将解码出的一帧压入 PCM FIFO
+        for(let i = 0; i < pcm_l.length; i++) {
+            AUDIO_PCM_L_FIFO.push(pcm_l[i]);
+            AUDIO_PCM_R_FIFO.push(pcm_r[i]);
+        }
+
+        // 绘制时域波形
+        // cv.Clear();
+        let window_length = pcm_l.length;
+        cv.SetBackgroundColor("#000");
+        cv.Line([cv.Xmin, 0], [cv.Xmax, 0], "#666");
+        let window = pcm_l;
+        let index = 0;
+        for(let x = 1; x < window_length; x++) {
+            cv.Line([x-1, window[index-1]], [x, window[index]], "#0f0");
+            index++;
+        }
+
+        $("#mp3_fifo_length").html(`${AUDIO_MP3_FRAME_FIFO.length}`);
+        $("#pcm_fifo_length").html(`${AUDIO_PCM_L_FIFO.length}`);
+    }, MP3_FRAME_DURATION);
+
+    let audioCtx = new window.AudioContext();
+    let scriptNode = audioCtx.createScriptProcessor(AUDIO_BUFFER_LENGTH, 2, 2);
+    let audioSourceBuffer = audioCtx.createBuffer(MP3_CHANNELS, AUDIO_BUFFER_LENGTH, MP3_SAMPLE_RATE);
+    let audioSourceBufferNode = audioCtx.createBufferSource();
+    audioSourceBufferNode.buffer = audioSourceBuffer;
+
+    audioSourceBufferNode.connect(scriptNode);
+    scriptNode.connect(audioCtx.destination);
+
+    scriptNode.onaudioprocess = function(audioProcessingEvent) {
+        let outputBuffer = audioProcessingEvent.outputBuffer;
+        if(AUDIO_PCM_L_FIFO.length > AUDIO_BUFFER_LENGTH) {
+            // 从 PCM FIFO 取出1段PCM，长度为AUDIO_BUFFER_LENGTH，用于播放
+            let chunk_l = AUDIO_PCM_L_FIFO.slice(0, AUDIO_BUFFER_LENGTH);
+            AUDIO_PCM_L_FIFO = AUDIO_PCM_L_FIFO.slice(AUDIO_BUFFER_LENGTH);
+            let chunk_r = AUDIO_PCM_R_FIFO.slice(0, AUDIO_BUFFER_LENGTH);
+            AUDIO_PCM_R_FIFO = AUDIO_PCM_R_FIFO.slice(AUDIO_BUFFER_LENGTH);
+            outputBuffer.getChannelData(0).set(chunk_l);
+            outputBuffer.getChannelData(1).set(chunk_r);
+        }
+    }
+
+    audioSourceBufferNode.start(0);
+}
+
+$("#ws_status").click(() => {
+    openWebsocket();
+});
 
 $("#canvasSwitch").click(() => {
     let slider = $("#canvasSwitch").children(".SwitchSlider");
