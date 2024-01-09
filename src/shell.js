@@ -15,35 +15,9 @@
 // GUI的比特率状态
 let shell_bitrate = 320000;
 
-const NALU_MTU = 1000; // NAL层最小传输单元长度
-
 let isSpetrogramShow = false;
 
 let cv = SpectrogramInit("spectrogram");
-
-let VIDEO_FRAMES = [];
-let audio_frame_clock = 0;
-
-let ws_opened = false;
-
-let VIDEO_SLICE_FIFO = [];
-let VIDEO_SLICE_COUNT = 0;
-
-// TODO IP参数
-let ws_ip_address = "192.168.10.248";
-let socket = null;
-
-function openWebsocket() {
-    socket = new WebSocket(`ws://${ws_ip_address}:5000/`);
-    socket.binaryType = "arraybuffer";
-    socket.addEventListener('open', (event) => {
-        $("#ws_status").html("WS已连接");
-        $("#ws_status").css("background-color", "#1bb61b");
-        $("#VideoSelector").show();
-        ws_opened = true;
-        socket.send('Hello Tx Server!');
-    });
-}
 
 function readerOnLoad(reader, filename) {
     return () => {
@@ -149,75 +123,7 @@ const onRunning = (info) => {
     $("#speed").html(`${speed}x`);
     $("#progressbar").css("width", `${(frameCount / frameNumber * 100).toFixed(2)}%`);
 
-    if(ws_opened === false || socket.readyState !== WebSocket.OPEN) {
-        return;
-    }
-
-    // 构建音频SCE帧
-    let audio_sce_frame = sce_encode(1, frameCount, 0xffff, info.frame);
-    // 封装为CMS帧发射出去
-    let audio_cms_frame = cms_encode([audio_sce_frame]);
-    // NOTE 实验证明，将音频帧和视频分片分散到两个CMS帧中分别发送而不复用，也就是虚级化CMS层，有两个好处：一是降低CMS帧错误率，二是避免接收端饥饿
-    // TODO 重复代码
-    let nal_packets = cms_frame_to_nal_packets(audio_cms_frame, NALU_MTU);
-    for(let i = 0; i < nal_packets.length; i++) {
-        let nal_packet = new Uint8Array(nal_packets[i]);
-        socket.send(nal_packet);
-    }
-
-    // 关键帧检查：首先检查当前时刻是否应该取出视频帧
-    if(need_next_video_frame(frameCount) === true) {
-        // 判断当前时刻是否是特殊关键帧，如果是特殊关键帧，则切成5片；否则切成4片
-        let video_slice_number = (is_special_critical_frame(frameCount)) ? 5 : 4;
-        // 从FIFO头部取出一个视频帧
-        let video_frame = VIDEO_FRAMES.shift();
-        // 如果没有取出视频帧，说明FIFO饥饿
-        if(video_frame === undefined) {
-            return;
-        }
-        // 如果取出了视频帧，则对其进行分片
-        else {
-            let slices = video_frame_slice(video_frame, video_slice_number);
-            // 除第一个分片外，全部加入分片队列，供后续音频帧到来时复用
-            for(let i = 1; i < video_slice_number; i++) {
-                VIDEO_SLICE_FIFO.push(slices[i]);
-            }
-            // 将第一个分片与当前音频帧复用为CMS帧
-            VIDEO_SLICE_COUNT = 0;
-            let video_slice_sce_frame = sce_encode(2, frameCount, VIDEO_SLICE_COUNT, slices[0]);
-            let video_cms_frame = cms_encode([video_slice_sce_frame]);
-            // 将CMS帧拆分成NAL报文
-            let nal_packets = cms_frame_to_nal_packets(video_cms_frame, NALU_MTU);
-            for(let i = 0; i < nal_packets.length; i++) {
-                let nal_packet = new Uint8Array(nal_packets[i]);
-                socket.send(nal_packet);
-            }
-        }
-
-    }
-    // 如果当前时刻不是关键帧
-    else {
-        // 从分片队列中取出一个分片。由于音视频帧率间的确定关系，TODO ？ 可以保证到下一个关键帧的时候，队列恰好被排空
-        let s = VIDEO_SLICE_FIFO.shift();
-        VIDEO_SLICE_COUNT++;
-        // 一般是没有视频的情况
-        if(s === undefined) {
-            return;
-        }
-        else {
-            // 将刚刚取出的分片与当前音频帧复用为CMS帧，并拆分成NALU
-            let video_slice_sce_frame = sce_encode(2, frameCount, VIDEO_SLICE_COUNT, s);
-            let video_cms_frame = cms_encode([video_slice_sce_frame]);
-            // 将CMS帧拆分成NAL报文
-            let nal_packets = cms_frame_to_nal_packets(video_cms_frame, NALU_MTU);
-            for(let i = 0; i < nal_packets.length; i++) {
-                let nal_packet = new Uint8Array(nal_packets[i]);
-                socket.send(nal_packet);
-            }
-        }
-
-    }
-
+    transmit(info.frame, frameCount);
 };
 
 const onFinished = (filename) => {
@@ -370,40 +276,8 @@ function decode(rawAudioData, filename) {
 
 function start_playing() {
     let decode_timer = setInterval(() => {
-        if(AUDIO_MP3_FRAME_FIFO.length < 2) {
-            console.log("AUDIO_MP3_FRAME_FIFO empty!");
-            return;
-        }
-        // 从 MP3 FIFO 取出3帧，用于解码。解码窗口每次取3个帧，但是窗口只移动1帧。
-        let decoding_frames = AUDIO_MP3_FRAME_FIFO.slice(0, 3);
-        AUDIO_MP3_FRAME_FIFO = AUDIO_MP3_FRAME_FIFO.slice(1);
-
-        // 对解码窗口内各帧进行解码，但是只取出解码后的PCM的最后一帧
-        let res = decode_mp3_frame(decoding_frames);
-        let pcm_l = res[0].slice(MP3_FRAME_SAMPLE_LENGTH * 2);
-        let pcm_r = res[1].slice(MP3_FRAME_SAMPLE_LENGTH * 2);
-
-        // 将解码出的一帧压入 PCM FIFO
-        for(let i = 0; i < pcm_l.length; i++) {
-            AUDIO_PCM_L_FIFO.push(pcm_l[i]);
-            AUDIO_PCM_R_FIFO.push(pcm_r[i]);
-        }
-
-        // 绘制时域波形
-        // cv.Clear();
-        let window_length = pcm_l.length;
-        cv.SetBackgroundColor("#000");
-        cv.Line([cv.Xmin, 0], [cv.Xmax, 0], "#666");
-        let window = pcm_l;
-        let index = 0;
-        for(let x = 1; x < window_length; x++) {
-            cv.Line([x-1, window[index-1]], [x, window[index]], "#0f0");
-            index++;
-        }
-
-        $("#mp3_fifo_length").html(`${AUDIO_MP3_FRAME_FIFO.length}`);
-        $("#pcm_fifo_length").html(`${AUDIO_PCM_L_FIFO.length}`);
-    }, MP3_FRAME_DURATION);
+        decode_mp3_to_pcm();
+    }, MP3_FRAME_DURATION / 2);
 
     let audioCtx = new window.AudioContext();
     let scriptNode = audioCtx.createScriptProcessor(AUDIO_BUFFER_LENGTH, 2, 2);
