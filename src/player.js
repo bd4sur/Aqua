@@ -77,18 +77,4 @@ function decode_mp3_to_pcm() {
         AUDIO_PCM_L_FIFO.push(pcm_l[i]);
         AUDIO_PCM_R_FIFO.push(pcm_r[i]);
     }
-
-    // 绘制时域波形
-    // cv.Clear();
-    let window_length = pcm_l.length;
-    cv.SetBackgroundColor("#000");
-    cv.Line([cv.Xmin, 0], [cv.Xmax, 0], "#666");
-    let window = pcm_l;
-    let index = 0;
-    for(let x = 1; x < window_length; x++) {
-        cv.Line([x-1, window[index-1]], [x, window[index]], "#0f0");
-        index++;
-    }
-    $("#mp3_fifo_length").html(`${AUDIO_MP3_FRAME_FIFO.length}`);
-    $("#pcm_fifo_length").html(`${AUDIO_PCM_L_FIFO.length}`);
 }

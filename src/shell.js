@@ -277,7 +277,7 @@ function decode(rawAudioData, filename) {
 function start_playing() {
     let decode_timer = setInterval(() => {
         decode_mp3_to_pcm();
-    }, MP3_FRAME_DURATION / 2);
+    }, 0);
 
     let audioCtx = new window.AudioContext();
     let scriptNode = audioCtx.createScriptProcessor(AUDIO_BUFFER_LENGTH, 2, 2);
@@ -298,6 +298,20 @@ function start_playing() {
             AUDIO_PCM_R_FIFO = AUDIO_PCM_R_FIFO.slice(AUDIO_BUFFER_LENGTH);
             outputBuffer.getChannelData(0).set(chunk_l);
             outputBuffer.getChannelData(1).set(chunk_r);
+
+            // 绘制时域波形
+            // cv.Clear();
+            let window_length = chunk_l.length;
+            cv.SetBackgroundColor("#000");
+            cv.Line([cv.Xmin, 0], [cv.Xmax, 0], "#666");
+            let window = chunk_l;
+            let index = 0;
+            for(let x = 1; x < window_length; x++) {
+                cv.Line([x-1, window[index-1]], [x, window[index]], "#0f0");
+                index++;
+            }
+            $("#mp3_fifo_length").html(`${AUDIO_MP3_FRAME_FIFO.length}`);
+            $("#pcm_fifo_length").html(`${AUDIO_PCM_L_FIFO.length}`);
         }
     }
 
