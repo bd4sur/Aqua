@@ -1,24 +1,19 @@
 
 <p align="center"><img src="./doc/logo.png" width="250"></p>
 
-------
+<h1 align="center">Aqua MP3 Encoder</h1>
 
-Experimental MPEG-1 Audio Layer 3 (MP3) encoder. Implemented according to ISO/IEC 11172-3 and its reference code "dist10" for personal research. No decoder included in this repo.
+**实验性 MPEG-1 Audio Layer 3 (MP3) 音频编码器**，可在Web浏览器中实时运行。依据 ISO/IEC 11172-3 及其配套的参考代码“dist10”实现。仅用于个人学习研究，请勿将本编码器用于正式目的，例如存档、广播等。
 
-**WARNING: USE AT YOUR OWN RISK! DO NOT USE THIS ENCODER FOR FORMAL PURPOSES! (e.g. archiving, broadcasting, etc.)**
+**Experimental MPEG-1 Audio Layer 3 (MP3) encoder**. Available on web browser. Implemented according to ISO/IEC 11172-3 and its reference code "dist10" for personal research. Do NOT use this encoder for formal purposes (e.g. archiving, broadcasting, etc.).
 
-实验性 MPEG-1 Audio Layer 3 (MP3) 音频编码器。依据 ISO/IEC 11172-3 及其配套的参考代码“dist10”实现，用于个人学习研究。本系统不含解码器。
-
-**警示：风险自负！请勿将本编码器用于正式目的，例如存档、广播等。**
-
-**▶ [在线体验 Online Demo](https://bd4sur.com/Aqua/index.html)**
+**▶ [立即体验 Online Demo](https://bd4sur.com/Aqua/index.html)** | [子带滤波器组可视化 Visual Demo for Subband Filter](https://bd4sur.com/Aqua/subband_filter.html)
 
 ## 特性
 
-- 目前实现的特性：采样率32kHz/44.1kHz/48kHz，恒定码率64/128/224/320kbps。
-- 计划开发的特性：第二心理声学模型、联合立体声。
-- 暂不实现的特性：混合块、尺度因子预测（即scfsi）、低采样率支持、VBR、ID3标签、回放增益等等。
-- 可视化工具：[分析子带滤波器组](https://bd4sur.com/Aqua/demo/Filterbank.html)
+- 已实现：采样率32kHz/44.1kHz/48kHz，恒定码率64/128/224/320kbps。
+- 待实现：第二心理声学模型。
+- 不实现：混合块、尺度因子预测（即scfsi）、低采样率支持、VBR、ID3标签、回放增益、联合立体声等。
 
 ## 使用方法
 
@@ -58,7 +53,7 @@ Experimental MPEG-1 Audio Layer 3 (MP3) encoder. Implemented according to ISO/IE
 
 ## 权利声明
 
-版权所有 © 2019~2023 BD4SUR，保留所有权利。
+版权所有 © 2019~2025 BD4SUR，保留所有权利。
 
 本系统“按原样”提供，采用MIT协议授权。本系统为作者个人以学习和自用目的所创作的作品。作者不对本系统的质量作任何承诺。作者不保证提供有关本系统的任何形式的解释、维护或支持。作者不为任何人使用此系统所造成的任何正面的或负面的后果负责。
 

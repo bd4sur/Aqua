@@ -22,7 +22,7 @@
 const WINDOW_LENGTH = 1024;
 const WINDOW_LENGTH_HALF = 512;
 
-const SPECTROGRAM_BUFFER_LENGTH = 400;
+const SPECTROGRAM_BUFFER_LENGTH = 500;
 
 ///////////////////////////////////
 //
@@ -149,13 +149,13 @@ function HSV_to_RGB(h, s, v) {
 // dB转颜色
 function dB2Color(dB) {
 
-    /*
-    const MIN = -20;
+    // 使用自行实现的FFT计算频谱，结果是dB
+    const MIN = -100;
     const MAX = 50;
-    */
 
-    const MIN = 0;
-    const MAX = 255;
+    // 使用 Web Audio API 获取频谱
+    // const MIN = 0;
+    // const MAX = 255;
 
     let ratio = (dB - MIN) / (MAX - MIN);
     ratio = ratio * ratio; // 优化颜色分布

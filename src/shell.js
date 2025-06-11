@@ -299,17 +299,51 @@ function start_playing() {
             outputBuffer.getChannelData(0).set(chunk_l);
             outputBuffer.getChannelData(1).set(chunk_r);
 
-            // 绘制时域波形
-            // cv.Clear();
-            let window_length = chunk_l.length;
-            cv.SetBackgroundColor("#000");
-            cv.Line([cv.Xmin, 0], [cv.Xmax, 0], "#666");
-            let window = chunk_l;
-            let index = 0;
-            for(let x = 1; x < window_length; x++) {
-                cv.Line([x-1, window[index-1]], [x, window[index]], "#0f0");
-                index++;
+            // 控制是否绘制声谱图
+            // 1 示波器:绘制时域波形
+            if (!isSpetrogramShow) {
+                // cv.Clear();
+                let window_length = chunk_l.length;
+                cv.SetBackgroundColor("#000");
+                cv.Line([cv.Xmin, 0], [cv.Xmax, 0], "#666");
+                let window = chunk_l;
+                let index = 0;
+                for(let x = 1; x < window_length; x++) {
+                    cv.Line([x-1, window[index-1]], [x, window[index]], "#0f0");
+                    index++;
+                }
             }
+            // 2 声谱图
+            else {
+                /*
+                // 使用 Web Audio API 获取频谱
+                analyser.getByteFrequencyData(dataArray);
+                let spectrum = Array.from(dataArray);
+                PushIntoBuffer(spectrum, SPECTROGRAM_BUFFER, SPECTROGRAM_BUFFER_LENGTH);
+                */
+                // { 以下是自行实现的FFT频谱 //////////////////////////////////////////////////////
+                // 计算频谱并推入缓冲区
+                let spectrum = CalculateSpectrum(0, chunk_l);
+                PushIntoBuffer(spectrum, SPECTROGRAM_BUFFER, SPECTROGRAM_BUFFER_LENGTH);
+                // } /////////////////////////////////////////////////////////////////////////////
+
+                // 绘制声谱图
+                RenderSpectrogram(cv, SPECTROGRAM_BUFFER, WINDOW_LENGTH);
+
+
+                let spectrum2 = CalculateSpectrum(WINDOW_LENGTH * 1, chunk_l);
+                PushIntoBuffer(spectrum2, SPECTROGRAM_BUFFER, SPECTROGRAM_BUFFER_LENGTH);
+                RenderSpectrogram(cv, SPECTROGRAM_BUFFER, WINDOW_LENGTH);
+
+                // let spectrum3 = CalculateSpectrum(WINDOW_LENGTH * 2, chunk_l);
+                // PushIntoBuffer(spectrum3, SPECTROGRAM_BUFFER, SPECTROGRAM_BUFFER_LENGTH);
+                // RenderSpectrogram(cv, SPECTROGRAM_BUFFER, WINDOW_LENGTH);
+
+                // let spectrum4 = CalculateSpectrum(WINDOW_LENGTH * 3, chunk_l);
+                // PushIntoBuffer(spectrum4, SPECTROGRAM_BUFFER, SPECTROGRAM_BUFFER_LENGTH);
+                // RenderSpectrogram(cv, SPECTROGRAM_BUFFER, WINDOW_LENGTH);
+            }
+
             $("#mp3_fifo_length").html(`${AUDIO_MP3_FRAME_FIFO.length}`);
             $("#pcm_fifo_length").html(`${AUDIO_PCM_L_FIFO.length}`);
         }
