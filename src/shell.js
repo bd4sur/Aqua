@@ -335,13 +335,13 @@ function start_playing() {
                 PushIntoBuffer(spectrum2, SPECTROGRAM_BUFFER, SPECTROGRAM_BUFFER_LENGTH);
                 RenderSpectrogram(cv, SPECTROGRAM_BUFFER, WINDOW_LENGTH);
 
-                // let spectrum3 = CalculateSpectrum(WINDOW_LENGTH * 2, chunk_l);
-                // PushIntoBuffer(spectrum3, SPECTROGRAM_BUFFER, SPECTROGRAM_BUFFER_LENGTH);
-                // RenderSpectrogram(cv, SPECTROGRAM_BUFFER, WINDOW_LENGTH);
+                let spectrum3 = CalculateSpectrum(WINDOW_LENGTH * 2, chunk_l);
+                PushIntoBuffer(spectrum3, SPECTROGRAM_BUFFER, SPECTROGRAM_BUFFER_LENGTH);
+                RenderSpectrogram(cv, SPECTROGRAM_BUFFER, WINDOW_LENGTH);
 
-                // let spectrum4 = CalculateSpectrum(WINDOW_LENGTH * 3, chunk_l);
-                // PushIntoBuffer(spectrum4, SPECTROGRAM_BUFFER, SPECTROGRAM_BUFFER_LENGTH);
-                // RenderSpectrogram(cv, SPECTROGRAM_BUFFER, WINDOW_LENGTH);
+                let spectrum4 = CalculateSpectrum(WINDOW_LENGTH * 3, chunk_l);
+                PushIntoBuffer(spectrum4, SPECTROGRAM_BUFFER, SPECTROGRAM_BUFFER_LENGTH);
+                RenderSpectrogram(cv, SPECTROGRAM_BUFFER, WINDOW_LENGTH);
             }
 
             $("#mp3_fifo_length").html(`${AUDIO_MP3_FRAME_FIFO.length}`);

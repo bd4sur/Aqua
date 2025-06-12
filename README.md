@@ -9,6 +9,8 @@
 
 **▶ [立即体验 Online Demo](https://bd4sur.com/Aqua/index.html)** | [子带滤波器组可视化 Visual Demo for Subband Filter](https://bd4sur.com/Aqua/subband_filter.html)
 
+![ ](./doc/aqua-overview.png)
+
 ## 特性
 
 - 已实现：采样率32kHz/44.1kHz/48kHz，恒定码率64/128/224/320kbps。
@@ -20,12 +22,6 @@
 - 可视化用户界面：下载仓库，直接在浏览器中打开`index.html`即可。
 - 控制台命令：执行`node aqua.js`，用于批量编码。待完善。
 - 构建：`npx tsc`
-
-## 研究笔记
-
-![编码器框图](./doc/aqua-overview.png)
-
-![码率和噪声控制循环](./doc/aqua-rdo-loop.png)
 
 ## 研究开发进度
 
@@ -61,3 +57,4 @@
 
 - [jQuery](https://jquery.com/)
 - [FileSaver.js](https://github.com/eligrey/FileSaver.js)
+- [soundbus-technologies/js-mp3](https://github.com/soundbus-technologies/js-mp3)
